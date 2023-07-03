@@ -1,0 +1,12 @@
+flask-restx
+pymongo
+elasticsearch
+python-dateutil
+nltk
+redis
+requests
+werkzeug==2.1.2
+pandas
+flask-cors
+scikit-learn==1.1.1
+tensorflow
