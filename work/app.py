@@ -1,6 +1,6 @@
 
 import os
-
+import traceback
 import pandas as pd
 import redis
 from flask import Flask, request
@@ -157,7 +157,7 @@ class CreateWithArray(Resource):
             job_active.delete("STOP")
             out = [{"id": str(table["_id"]), "datasetName": table["datasetName"], "tableName": table["tableName"]} for table in tables]
         except Exception as e:
-            return {"status": "Error", "message": str(e)}, 400
+            return {"status": "Error", "message": str(e), "traceback": traceback.format_exception()}, 400
 
         return {"status": "Ok", "tables": out}, 200
 
@@ -319,25 +319,31 @@ class Upload(Resource):
         if args["kgReference"] is not None:
             kgReference = args["kgReference"]
         token = args["token"]
-        args = upload_parser.parse_args()
-        uploaded_file = args["file"]  # This is FileStorage instance
-        result = dataset_c.find_one({"datasetName": datasetName})
-        if result is None:
-            dataset_name = "DEFAULT"
-        else:
-            dataset_name = result["datasetName"]    
-        df = pd.read_csv(uploaded_file)
-        table, header = (df.values.tolist(), list(df.columns))
-        name = uploaded_file.filename.split(".")[0]
-        tables = utils.format_table(name, dataset_name, table, header, kg_reference=kgReference)
-        dataset, tables = utils.fill_tables(tables, row_c)
-        utils.fill_dataset(dataset, dataset_c, table_c)
-        print(tables, flush=True)
-        row_c.insert_many(tables)    
-        job_active.delete("STOP")
-        out = [{"id": str(table["_id"]),  "datasetName": table["datasetName"], "tableName": table["tableName"]} for table in tables]
+        if not validate_token(token):
+            return {"Error": "Invalid Token"}, 403
+        
+        try:
+            args = upload_parser.parse_args()
+            uploaded_file = args["file"]  # This is FileStorage instance
+            result = dataset_c.find_one({"datasetName": datasetName})
+            if result is None:
+                dataset_name = "DEFAULT"
+            else:
+                dataset_name = result["datasetName"]    
+            df = pd.read_csv(uploaded_file)
+            table, header = (df.values.tolist(), list(df.columns))
+            name = uploaded_file.filename.split(".")[0]
+            tables = utils.format_table(name, dataset_name, table, header, kg_reference=kgReference)
+            dataset, tables = utils.fill_tables(tables, row_c)
+            utils.fill_dataset(dataset, dataset_c, table_c)
+            print(tables, flush=True)
+            row_c.insert_many(tables)    
+            job_active.delete("STOP")
+            out = [{"id": str(table["_id"]),  "datasetName": table["datasetName"], "tableName": table["tableName"]} for table in tables]
+        except Exception as e:
+            return {"status": "Error", "message": str(e), "traceback": traceback.format_exception()}, 400
+        
         return {"status": "Ok", "tables": out}, 200
-
 
 
 @ds.route("/<datasetName>/table/<tableName>")
