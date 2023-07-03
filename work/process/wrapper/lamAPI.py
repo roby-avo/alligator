@@ -139,7 +139,7 @@ class LamAPI():
         return result
 
 
-    def lookup(self, string, ngrams=False, fuzzy=False, types=None, limit=10):
+    def lookup(self, string, ngrams=False, fuzzy=False, types=None, limit=100):
         params = {
             'token': LAMAPI_TOKEN,
             'name': string,
