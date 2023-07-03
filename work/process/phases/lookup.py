@@ -40,7 +40,7 @@ class Lookup:
         result = None
         try:
             if len(str(cell)) > 0 and str(cell).lower() != "nan":
-                result = self._lamAPI.lookup(cell, ngrams=True, fuzzy=False, types=types, limit="special")
+                result = self._lamAPI.lookup(cell)
                 if cell not in result:
                     raise Exception("Error from lamAPI")
             candidates = result[cell]    
