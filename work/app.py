@@ -34,7 +34,7 @@ CORS(app)
 with open("data.txt") as f:
     description = f.read()
 
-api = Api(app, version="1.0", title="Alligator", description=description)
+api = Api(app, version="1.0", title="AlligatorOT", description=description)
 ds = api.namespace("dataset", description="Dataset namespace")
 
 
