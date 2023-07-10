@@ -1,5 +1,6 @@
+K = 0.5
 THRESHOLD = 0.03
-SIGMA = 0.7
+SIGMA = 0.5
 
 class Storage:
     def __init__(self, metadata: dict, cea_prelinking_data, rows, cta, cpa, collections: dict):
@@ -41,6 +42,8 @@ class Storage:
                 wc = []
                 rank = candidates[0:20] if len(candidates) > 0 else []
                 for candidate in cell.candidates():
+                    candidate["old_score"] = candidate["score"]
+                    candidate["score"] = (1-K) * candidate["score"] + K * (candidates[0]["score"] - candidate["score"])
                     if (candidates[0]["score"] - candidate["score"]) < THRESHOLD:
                         wc.append(candidate)
                 
