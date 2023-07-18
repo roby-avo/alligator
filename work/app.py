@@ -47,10 +47,6 @@ def validate_token(token):
     return token == API_TOKEN
 
 
-dataset_fields = api.model("Dataset", {
-    "datasetName": fields.String
-}) 
-
 rows_fields = api.model("Rows", {
     "idRow": fields.Integer,
     "data": fields.List(fields.String)
@@ -265,24 +261,6 @@ class DatasetID(Resource):
             for result in results
         ]
         return out
-
-
-    @ds.doc(
-        body = dataset_fields
-    )
-    def put(self, datasetName):
-        parser = reqparse.RequestParser()
-        parser.add_argument("token", type=str, help="variable 1", location="args")
-        parser.add_argument("datasetName", type=str, help="variable 2", location="args")
-        args = parser.parse_args()
-        token = args["token"]
-        dataset_name = args["datasetName"]
-        if not validate_token(token):
-            return {"Error": "Invalid Token"}, 403
-        result = dataset_c.update_one({"datasetName": dataset_name}, {"$set": {}})
-
-        return list(result), 200       
-
 
     def delete(self, datasetName):
         parser = reqparse.RequestParser()
