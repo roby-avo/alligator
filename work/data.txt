@@ -2,4 +2,4 @@
 <strong>A.L.L.I.G.A.T.O.R. - Automated Learning and Linking for Intelligent Graph-based Association of Tabular Objects and Relationships</strong> is a project that performs entity linking over tabular data with the support of a ML algorithm. 
 Through an API specification, the tool allows for the performance of entity linking against <a href='https://www.wikidata.org/'>Wikidata</a>.<br>
 <br>
-You can test the API using the token: <code>insideslab-lamapi-2022</code>. (<small>The maximum number of requests per day is 1000</small>).
+You can test the API using the token: <code>alligator_demo_2023</code>. (<small>The maximum number of requests per day is 1000</small>).
