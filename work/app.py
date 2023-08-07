@@ -153,7 +153,7 @@ class CreateWithArray(Resource):
             job_active.delete("STOP")
             out = [{"id": str(table["_id"]), "datasetName": table["datasetName"], "tableName": table["tableName"]} for table in tables]
         except Exception as e:
-            return {"status": "Error", "message": str(e), "traceback": traceback.format_exception()}, 400
+            return {"status": "Error", "message": str(e), "traceback": traceback.format_exc()}, 400
 
         return {"status": "Ok", "tables": out}, 200
 
@@ -319,7 +319,7 @@ class Upload(Resource):
             job_active.delete("STOP")
             out = [{"id": str(table["_id"]),  "datasetName": table["datasetName"], "tableName": table["tableName"]} for table in tables]
         except Exception as e:
-            return {"status": "Error", "message": str(e), "traceback": traceback.format_exception()}, 400
+            return {"status": "Error", "message": str(e), "traceback": traceback.format_exc()}, 400
         
         return {"status": "Ok", "tables": out}, 200
 
