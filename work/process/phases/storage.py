@@ -43,7 +43,7 @@ class Storage:
                 rank = candidates[0:20] if len(candidates) > 0 else []
                 for i, candidate in enumerate(candidates):
                     if i+1 < len(candidates):
-                        candidate["delta"] = (candidate["rho"] - candidates[i+1]["rho"])
+                        candidate["delta"] = round(candidate["rho"] - candidates[i+1]["rho"], 3)
                     else:
                         candidate["delta"] = 0    
                     candidate["score"] = round((1-K) * candidate["rho"] + K * candidate["delta"], 3)
