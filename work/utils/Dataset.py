@@ -14,7 +14,7 @@ class DatasetModel:
         page = math.floor(total_datasets / self.DATASET_FOR_PAGE) + 1
 
         for dataset_name in self._table_metadata:
-            n_tables = self._table_metadata[dataset_name]
+            n_tables = len(self._table_metadata[dataset_name])
             result = dataset_c.find_one({"datasetName": dataset_name})
             if result is None:
                 dataset_c.insert_one({
