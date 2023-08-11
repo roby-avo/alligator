@@ -76,6 +76,7 @@ class TableModel:
             "header": headers,
             "rows": [],
             "kgReference": kg_reference,
+            "column": {},
             "status": "TODO",
             "state": "READY",
             "candidateSize": 100
