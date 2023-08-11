@@ -158,7 +158,8 @@ class CreateWithArray(Resource):
             table.store_tables()
             dataset = DatasetModel(mongoDBWrapper, table.table_metadata)
             dataset.store_datasets()
-            mongoDBWrapper.get_collection("row").insert_many(table.get_data())
+            tables = table.get_data()
+            mongoDBWrapper.get_collection("row").insert_many(tables)
             job_active.delete("STOP")
             out = [{"id": str(table["_id"]), "datasetName": table["datasetName"], "tableName": table["tableName"]} for table in tables]
         except Exception as e:
@@ -332,7 +333,8 @@ class Upload(Resource):
             table.store_tables()
             dataset = DatasetModel(mongoDBWrapper, table.table_metadata)
             dataset.store_datasets()
-            mongoDBWrapper.get_collection("row").insert_many(table.get_data())    
+            tables = table.get_data()
+            mongoDBWrapper.get_collection("row").insert_many(tables)    
             job_active.delete("STOP")
             out = [{"id": str(table["_id"]),  "datasetName": table["datasetName"], "tableName": table["tableName"]} for table in tables]
         except Exception as e:
