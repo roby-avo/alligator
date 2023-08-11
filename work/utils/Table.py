@@ -104,7 +104,7 @@ class Table:
     def fill_table_metadata(self, entry):
         dataset_name = entry['datasetName']
         table_name = entry['tableName']
-        if self.table_metadata not in self.table_metadata:
+        if dataset_name not in self.table_metadata:
             self.table_metadata[dataset_name] = {}
         if table_name not in self.table_metadata[dataset_name]:
             self.table_metadata[dataset_name][table_name] = {
