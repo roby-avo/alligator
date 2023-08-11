@@ -1,4 +1,4 @@
-K = 0.1
+K = 0.7
 THRESHOLD = 0.03
 SIGMA = 0.5
 
@@ -42,13 +42,14 @@ class Storage:
                 wc = []
                 rank = candidates[0:20] if len(candidates) > 0 else []
                 for candidate in candidates:
-                    candidate["omega"] = (1-K) * candidate["score"] + K * (candidates[0]["score"] - candidate["score"])
-                    if (candidates[0]["omega"] - candidate["omega"]) < THRESHOLD:
+                    candidate["delta"] = (candidates[0]["score"] - candidate["score"])
+                    candidate["score"] = (1-K) * candidate["rho"] + K * candidate["delta"]
+                    if (candidates[0]["score"] - candidate["score"]) < THRESHOLD:
                         wc.append(candidate)
                 
                 if len(wc) > 0:
                     cea[str(cell._id_col)] = wc[0]["id"]
-                    if wc[0]["omega"] >= SIGMA:
+                    if wc[0]["score"] >= SIGMA:
                         wc[0]["match"] = True
                    
                 winning_candidates.append(wc)

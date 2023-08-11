@@ -381,7 +381,7 @@ class TableID(Resource):
             out = out[0]
             results = cea_c.find(query)
             for result in results:
-                winning_candidates = result["winningCandidates"]
+                winning_candidates = result["winningCandidates"][0:2]
                 for id_col, candidates in enumerate(winning_candidates):
                     entities = []
                     for candidate in candidates:

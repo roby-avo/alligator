@@ -92,7 +92,7 @@ try:
     cea_preliking_data = utils.get_cea_pre_linking_data(metadata, rows)
     revision = FeaturesExtractionRevision(rows)
     features = revision.compute_features()
-    Prediction(rows, features, model).compute_prediction("score")
+    Prediction(rows, features, model).compute_prediction("rho")
     storage = Storage(metadata, cea_preliking_data, rows, revision._cta, revision._cpa_pair, collections)
     storage.store_data()
     end = time.time()
