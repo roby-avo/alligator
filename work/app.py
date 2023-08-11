@@ -158,7 +158,7 @@ class CreateWithArray(Resource):
             table.store_tables()
             dataset = DatasetModel(mongoDBWrapper, table.table_metadata)
             dataset.store_datasets()
-            mongoDBWrapper.get_collection("rows").insert_many(table.get_data())
+            mongoDBWrapper.get_collection("row").insert_many(table.get_data())
             job_active.delete("STOP")
             out = [{"id": str(table["_id"]), "datasetName": table["datasetName"], "tableName": table["tableName"]} for table in tables]
         except Exception as e:
@@ -327,12 +327,12 @@ class Upload(Resource):
             row_c.insert_many(tables) """
             dataset_name = datasetName
             table_name = uploaded_file.filename.split(".")[0]
-            table = Table(mongoDBWrapper)
+            table = TableModel(mongoDBWrapper)
             table.parse_csv(uploaded_file, dataset_name, table_name, kg_reference)
             table.store_tables()
-            dataset = Dataset(mongoDBWrapper, table.table_metadata)
+            dataset = DatasetModel(mongoDBWrapper, table.table_metadata)
             dataset.store_datasets()
-            mongoDBWrapper.get_collection("rows").insert_many(table.get_data())    
+            mongoDBWrapper.get_collection("row").insert_many(table.get_data())    
             job_active.delete("STOP")
             out = [{"id": str(table["_id"]),  "datasetName": table["datasetName"], "tableName": table["tableName"]} for table in tables]
         except Exception as e:
