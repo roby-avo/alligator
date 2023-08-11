@@ -1,6 +1,6 @@
 import math
 
-class Dataset():
+class Dataset:
 
     DATASET_FOR_PAGE = 5
     
@@ -12,7 +12,7 @@ class Dataset():
         dataset_c = self._db.get_collection("dataset")
         total_datasets = dataset_c.estimated_document_count()
         page = math.floor(total_datasets / self.DATASET_FOR_PAGE) + 1
-     
+
         for dataset_name in self._table_metadata:
             n_tables = self._table_metadata[dataset_name]
             result = dataset_c.find_one({"datasetName": dataset_name})
