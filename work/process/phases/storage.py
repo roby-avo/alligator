@@ -1,4 +1,4 @@
-K = 0.7
+K = 0
 THRESHOLD = 0.03
 SIGMA = 0.5
 
@@ -41,9 +41,12 @@ class Storage:
                 candidates = cell.candidates()
                 wc = []
                 rank = candidates[0:20] if len(candidates) > 0 else []
-                for candidate in candidates:
-                    candidate["delta"] = (candidates[0]["score"] - candidate["score"])
-                    candidate["score"] = (1-K) * candidate["rho"] + K * candidate["delta"]
+                for i, candidate in enumerate(candidates):
+                    if i+1 < len(candidates):
+                        candidate["delta"] = (candidate["score"] - candidate[i+1]["score"])
+                    else:
+                        candidate["delta"] = 0    
+                    candidate["score"] = round((1-K) * candidate["rho"] + K * candidate["delta"], 3)
                     if (candidates[0]["score"] - candidate["score"]) < THRESHOLD:
                         wc.append(candidate)
                 
