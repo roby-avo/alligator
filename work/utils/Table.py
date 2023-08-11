@@ -95,10 +95,10 @@ class TableModel:
             
             for chunk_df in chunks:
                 new_entry = table_obj.copy()
-                new_entry['rows'] = [{"idRow": idx + 1, "data": row_data} for idx, row_data in chunk_df.values.tolist()]
+                new_entry['rows'] = [{"idRow": idx + 1, "data": row_data} for idx, row_data in enumerate(chunk_df.values.tolist())]
                 self.data.append(new_entry)
         else:
-            table_obj['rows'] = [{"idRow": idx + 1, "data": row_data} for idx, row_data in df.values.tolist()]
+            table_obj['rows'] = [{"idRow": idx + 1, "data": row_data} for idx, row_data in enumerate(df.values.tolist())]
             self.data.append(table_obj)
 
     def fill_table_metadata(self, entry):
