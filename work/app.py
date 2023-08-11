@@ -12,8 +12,8 @@ import utils.api_utils as utils
 from indexing import index
 from process.wrapper.mongodb_conn import get_collection
 from process.wrapper.Database import MongoDBWrapper
-from utils.Dataset import Dataset
-from utils.Table import Table
+from utils.Dataset import DatasetModel
+from utils.Table import TableModel
 
 index.create_index()
 
@@ -153,10 +153,10 @@ class CreateWithArray(Resource):
             """ dataset, tables = utils.fill_tables(tables, row_c)
             utils.fill_dataset(dataset, dataset_c, table_c)
             row_c.insert_many(tables) """ 
-            table = Table(mongoDBWrapper)
+            table = TableModel(mongoDBWrapper)
             table.parse_json(tables)
             table.store_tables()
-            dataset = Dataset(mongoDBWrapper, table.table_metadata)
+            dataset = DatasetModel(mongoDBWrapper, table.table_metadata)
             dataset.store_datasets()
             mongoDBWrapper.get_collection("rows").insert_many(table.get_data())
             job_active.delete("STOP")

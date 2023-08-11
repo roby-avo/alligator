@@ -1,6 +1,6 @@
 import math
 
-class Dataset:
+class DatasetModel:
 
     DATASET_FOR_PAGE = 5
     

@@ -1,7 +1,7 @@
 import pandas as pd
 import math
 
-class Table:
+class TableModel:
     
     MIN_ROWS = 25
     SPLIT_THRESHOLD = 50
