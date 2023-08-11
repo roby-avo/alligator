@@ -7,7 +7,7 @@ class Lookup:
         self._header = data.get("header", [])
         self._dataset_name = data["datasetName"]
         self._table_name = data["tableName"]
-        self._types = data["types"]     
+        self._types = data.get("types", {})    
         self._lamAPI = lamAPI
         self._target = target
         self._log_c = log_c
