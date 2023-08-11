@@ -55,7 +55,7 @@ class FeaturesExtractionRevision:
             for cell in row.get_cells():
                 id_col = str(cell._id_col)
                 history = set()
-                for candidate in cell.candidates()[0:3]:
+                for candidate in cell.candidates()[0:1]:
                     types = candidate["types"]
                     for t in types:
                         id_type = t["id"]

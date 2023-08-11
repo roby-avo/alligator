@@ -8,7 +8,7 @@ class DataPreparation:
   
     def compute_datatype(self):
         column_metadata = {}
-        target = {"SUBJ": 0, "NE": [], "LIT": [], "LIT_DATATYPE": {}}
+        target = {"SUBJ": None, "NE": [], "LIT": [], "LIT_DATATYPE": {}}
         columns_data = [[] for _ in range(0, len(self._rows[0]['data']))]
         for row in self._rows:
             for id_col, cell in enumerate(row["data"]):

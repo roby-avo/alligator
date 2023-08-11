@@ -11,6 +11,9 @@ from werkzeug.datastructures import FileStorage
 import utils.api_utils as utils
 from indexing import index
 from process.wrapper.mongodb_conn import get_collection
+from process.wrapper.Database import MongoDBWrapper
+from utils.Dataset import Dataset
+from utils.Table import Table
 
 index.create_index()
 
@@ -21,7 +24,7 @@ API_TOKEN = os.environ["API_TOKEN"]
 
 job_active = redis.Redis(host=REDIS_ENDPOINT, db=REDIS_JOB_DB)
 
- 
+mongoDBWrapper = MongoDBWrapper("selbat")
 row_c = get_collection("row")
 cea_c = get_collection("cea")
 cpa_c = get_collection("cpa")
@@ -147,9 +150,15 @@ class CreateWithArray(Resource):
             return {"Error": "Invalid Json"}, 400
         
         try:
-            dataset, tables = utils.fill_tables(tables, row_c)
+            """ dataset, tables = utils.fill_tables(tables, row_c)
             utils.fill_dataset(dataset, dataset_c, table_c)
-            row_c.insert_many(tables)    
+            row_c.insert_many(tables) """ 
+            table = Table(mongoDBWrapper)
+            table.parse_json(tables)
+            table.store_tables()
+            dataset = Dataset(mongoDBWrapper, table.table_metadata)
+            dataset.store_datasets()
+            mongoDBWrapper.get_collection("rows").insert_many(table.get_data())
             job_active.delete("STOP")
             out = [{"id": str(table["_id"]), "datasetName": table["datasetName"], "tableName": table["tableName"]} for table in tables]
         except Exception as e:
@@ -293,9 +302,9 @@ class Upload(Resource):
         parser.add_argument("kgReference", type=str, help="variable 1", location="args")
         parser.add_argument("token", type=str, help="variable 2", location="args")
         args = parser.parse_args()
-        kgReference = "wikidata"
+        kg_reference = "wikidata"
         if args["kgReference"] is not None:
-            kgReference = args["kgReference"]
+            kg_reference = args["kgReference"]
         token = args["token"]
         if not validate_token(token):
             return {"Error": "Invalid Token"}, 403
@@ -303,19 +312,27 @@ class Upload(Resource):
         try:
             args = upload_parser.parse_args()
             uploaded_file = args["file"]  # This is FileStorage instance
-            result = dataset_c.find_one({"datasetName": datasetName})
+            """ result = dataset_c.find_one({"datasetName": datasetName})
             if result is None:
                 dataset_name = "DEFAULT"
             else:
-                dataset_name = result["datasetName"]    
-            df = pd.read_csv(uploaded_file)
+                dataset_name = result["datasetName"] """    
+            """ df = pd.read_csv(uploaded_file)
             table, header = (df.values.tolist(), list(df.columns))
             name = uploaded_file.filename.split(".")[0]
             tables = utils.format_table(name, dataset_name, table, header, kg_reference=kgReference)
             dataset, tables = utils.fill_tables(tables, row_c)
             utils.fill_dataset(dataset, dataset_c, table_c)
             print(tables, flush=True)
-            row_c.insert_many(tables)    
+            row_c.insert_many(tables) """
+            dataset_name = datasetName
+            table_name = uploaded_file.filename.split(".")[0]
+            table = Table(mongoDBWrapper)
+            table.parse_csv(uploaded_file, dataset_name, table_name, kg_reference)
+            table.store_tables()
+            dataset = Dataset(mongoDBWrapper, table.table_metadata)
+            dataset.store_datasets()
+            mongoDBWrapper.get_collection("rows").insert_many(table.get_data())    
             job_active.delete("STOP")
             out = [{"id": str(table["_id"]),  "datasetName": table["datasetName"], "tableName": table["tableName"]} for table in tables]
         except Exception as e:
