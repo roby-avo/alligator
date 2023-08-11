@@ -5,7 +5,7 @@ class Dataset():
     DATASET_FOR_PAGE = 5
     
     def __init__(self, db, table_metadata):
-        self_db = db
+        self._db = db
         self._table_metadata = table_metadata
 
     def store_datasets(self):
