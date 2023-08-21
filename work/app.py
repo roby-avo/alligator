@@ -374,6 +374,7 @@ class TableID(Resource):
             {
                 "datasetName": result["datasetName"],
                 "tableName": result["tableName"],
+                "header": result["header"],
                 "rows": result["rows"],
                 "semanticAnnotations": {"cea": [], "cpa": [], "cta": []},
                 "metadata": result.get("metadata", []),
