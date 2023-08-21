@@ -75,7 +75,8 @@ class Storage:
                 "tableName": self._table_name,
                 "row": row._id_row,
                 "candidates": rankend_candidates,
-                "kgReference": self._kg_reference
+                "kgReference": self._kg_reference,
+                "page": self._page
             })
 
         self._cea_collection.insert_many(cea_data)
@@ -94,7 +95,8 @@ class Storage:
             "tableName": self._table_name,
             "winningCandidates": self._cta,
             "cta": cta,
-            "kgReference": self._kg_reference
+            "kgReference": self._kg_reference,
+            "page": self._page
         }
 
         self._cta_collection.insert_one(cta_data)
@@ -117,7 +119,8 @@ class Storage:
             "subjectCol": self._rows[0].get_subject_cell()._id_col if self._rows[0].get_subject_cell() is not None else 0,
             "winningCandidates": self._cpa,
             "cpa": cpa,
-            "kgReference": self._kg_reference
+            "kgReference": self._kg_reference,
+            "page": self._page
         }
 
         self._cpa_collection.insert_one(cpa_data)

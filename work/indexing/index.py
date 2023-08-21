@@ -12,6 +12,7 @@ def create_index():
     for collection in collections:
         c = get_collection(collection)
         c.create_index([('tableName', 1), ('datasetName', 1)])
+        c.create_index([('tableName', 1), ('datasetName', 1), ('page', 1)])
         c.create_index([('datasetName', 1)])
         c.create_index([('tableName', 1)])
         
