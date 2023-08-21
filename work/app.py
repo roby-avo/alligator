@@ -347,7 +347,7 @@ class Upload(Resource):
     responses={200: "OK", 404: "Not found",
                400: "Bad request", 403: "Invalid token"},
     params={ 
-        "page": " The page number of the results. It starts from 0",
+        "page": " The page number of the results. It starts from 1",
         "token": " Your API key token for authentication"
     }
 )

@@ -98,9 +98,10 @@ class TableModel:
                 chunks[-2] = pd.concat([chunks[-2], chunks[-1]])
                 chunks.pop()
             
-            for chunk_df in chunks:
+            for page, chunk_df in enumerate(chunks):
                 new_entry = table_obj.copy()
                 new_entry['rows'] = [{"idRow": idx + 1, "data": row_data} for idx, row_data in enumerate(chunk_df.values.tolist())]
+                new_entry['page'] = page + 1
                 self.data.append(new_entry)
         else:
             table_obj['rows'] = [{"idRow": idx + 1, "data": row_data} for idx, row_data in enumerate(df.values.tolist())]
