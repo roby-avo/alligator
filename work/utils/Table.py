@@ -82,7 +82,8 @@ class TableModel:
             "target": {},
             "status": "TODO",
             "state": "READY",
-            "candidateSize": 100
+            "candidateSize": 100,
+            "page": 1
         }
 
         self.fill_table_metadata(table_obj)
