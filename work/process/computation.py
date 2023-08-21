@@ -2,10 +2,9 @@ import os
 import sys
 import time
 import traceback
-import warnings
 
-# Disable all warnings
-warnings.filterwarnings("ignore")
+# Set the environment variable to suppress TensorFlow warnings
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 import redis
 from keras.models import load_model
