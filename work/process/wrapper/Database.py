@@ -7,13 +7,9 @@ MONGO_ENDPOINT_PASSWORD = os.environ['MONGO_INITDB_ROOT_PASSWORD']
 MONGO_DBNAME = os.environ['MONGO_DBNAME']
 
 class MongoDBWrapper:
-    def __init__(self, database_name):
+    def __init__(self):
         """
         Initialize the MongoDBWrapper.
-
-        :param database_name: The name of the database.
-        :param host: MongoDB host (default is 'localhost').
-        :param port: MongoDB port (default is 27017).
         """
         self.client = MongoClient(
                             MONGO_ENDPOINT, 
@@ -22,7 +18,7 @@ class MongoDBWrapper:
                             password=MONGO_ENDPOINT_PASSWORD, 
                             authSource='admin'
                         )
-        self.database = self.client[database_name]
+        self.database = self.client[MONGO_DBNAME]
 
     def get_collection(self, collection_name):
         """

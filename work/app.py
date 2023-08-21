@@ -10,7 +10,6 @@ from werkzeug.datastructures import FileStorage
 
 import utils.api_utils as utils
 from indexing import index
-from process.wrapper.mongodb_conn import get_collection
 from process.wrapper.Database import MongoDBWrapper
 from utils.Dataset import DatasetModel
 from utils.Table import TableModel
@@ -24,13 +23,13 @@ API_TOKEN = os.environ["API_TOKEN"]
 
 job_active = redis.Redis(host=REDIS_ENDPOINT, db=REDIS_JOB_DB)
 
-mongoDBWrapper = MongoDBWrapper("selbat")
-row_c = get_collection("row")
-cea_c = get_collection("cea")
-cpa_c = get_collection("cpa")
-cta_c = get_collection("cta")
-dataset_c = get_collection("dataset")
-table_c = get_collection("table")
+mongoDBWrapper = MongoDBWrapper()
+row_c = mongoDBWrapper.get_collection("row")
+cea_c = mongoDBWrapper.get_collection("cea")
+cpa_c = mongoDBWrapper.get_collection("cpa")
+cta_c = mongoDBWrapper.get_collection("cta")
+dataset_c = mongoDBWrapper.get_collection("dataset")
+table_c = mongoDBWrapper.get_collection("table")
 
 app = Flask(__name__)
 CORS(app)
