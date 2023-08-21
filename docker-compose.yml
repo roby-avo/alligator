@@ -3,7 +3,7 @@ version: "3"
 services:
   jupyter:
     image: cremarco/mantis-jupyter
-    container_name: selbat_jupyter
+    container_name: alligator_jupyter
     environment:
       JUPYTER_ENABLE_LAB: "yes"
       RESTARTABLE: "yes"
@@ -21,7 +21,7 @@ services:
       args: 
         PYTHON_VERSION: ${PYTHON_VERSION}
     command: bash -c "flask run --host=0.0.0.0 & ./bash/computation.sh ${MAX_NUMBER_OF_JOB} & python ./utils/update_status.py"    
-    container_name: selbat_api
+    container_name: alligator_api
     env_file:
       - ./.env
     environment:
@@ -34,7 +34,7 @@ services:
       
   mongo:
     image: "mongo:${MONGO_VERSION}"
-    container_name: "selbat_mongo"
+    container_name: "alligator_mongo"
     ports:
       - "${MONGO_PORT}:27017"
     restart: always
@@ -47,7 +47,7 @@ services:
 
   redis:
     image: redis:alpine
-    container_name: selbat_redis
+    container_name: alligator_redis
     environment:
       - ALLOW_EMPTY_PASSWORD=yes
     restart: always  
