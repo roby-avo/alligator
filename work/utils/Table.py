@@ -39,6 +39,7 @@ class TableModel:
                     entry['target']['LIT'].append(column["idColumn"]) 
                     entry['target']['LIT_DATATYPE'][str(column["idColumn"])] = column["datatype"]
             
+            entry['page'] = 1
             entry['status'] = 'TODO'
             entry['state'] = 'READY'
             if "candidateSize" not in entry:
@@ -54,9 +55,10 @@ class TableModel:
                     chunks.pop()
                 
                 # Create new table entries for each chunk
-                for chunk in chunks:
+                for page, chunk in enumerate(chunks):
                     new_entry = entry.copy()
                     new_entry['rows'] = chunk
+                    new_entry['page'] = page + 1
                     processed_data.append(new_entry)
             else:
                 processed_data.append(entry)

@@ -54,7 +54,7 @@ target = data["target"]
 _id = data["_id"]
 dataset_name = data["datasetName"]
 table_name = data["tableName"]
-
+page = data["page"]
 
 lamAPI = LamAPI(LAMAPI_HOST, LAMAPI_PORT, LAMAPI_TOKEN, kg=kg_reference)
 
@@ -74,7 +74,8 @@ try:
     metadata = {
         "datasetName": dataset_name,
         "tableName": table_name,
-        "kgReference": kg_reference
+        "kgReference": kg_reference,
+        "page": page
     }
 
     collections = {

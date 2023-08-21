@@ -64,6 +64,7 @@ def get_cea_pre_linking_data(metadata, rows):
     dataset_name = metadata["datasetName"]
     table_name = metadata["tableName"]
     kg_reference = metadata["kgReference"]
+    page = metadata["page"]
     cea_prelinking_data = []
     
     for row in rows:
@@ -88,7 +89,8 @@ def get_cea_pre_linking_data(metadata, rows):
             "data": row.get_row_text(),
             "winningCandidates": winning_candidates,
             "cea": cea,
-            "kgReference": kg_reference
+            "kgReference": kg_reference,
+            "page": page
         })
 
     return cea_prelinking_data

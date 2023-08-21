@@ -10,6 +10,7 @@ class Storage:
         self._dataset_name = metadata["datasetName"]
         self._table_name = metadata["tableName"]
         self._kg_reference = metadata["kgReference"]
+        self._page = metadata["page"]
         self._cea_prelinking_data = cea_prelinking_data
         self._cea_prelinking_collection = collections["ceaPrelinking"] 
         self._cea_collection = collections["cea"] 
@@ -65,7 +66,8 @@ class Storage:
                 "data": row.get_row_text(),
                 "winningCandidates": winning_candidates,
                 "cea": cea,
-                "kgReference": self._kg_reference
+                "kgReference": self._kg_reference,
+                "page": self._page
             })
 
             candidates_scored_data.append({
