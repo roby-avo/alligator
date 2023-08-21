@@ -347,22 +347,27 @@ class Upload(Resource):
     responses={200: "OK", 404: "Not found",
                400: "Bad request", 403: "Invalid token"},
     params={ 
-        "token": "token api key"
+        "page": " The page number of the results. It starts from 0",
+        "token": " Your API key token for authentication"
     }
 )
 class TableID(Resource):
     def get(self, datasetName, tableName):
         parser = reqparse.RequestParser()
+        parser.add_argument("page", type=int, help="variable 1", location="args")
         parser.add_argument("token", type=str, help="variable 1", location="args")
         args = parser.parse_args()
+        page = args["page"]
         token = args["token"]
         #stringId = args["stringId"] == "true"
        
         if not validate_token(token):
             return {"Error": "Invalid Token"}, 403
 
+        if page is None:
+            page = 1
         
-        query = {"datasetName": datasetName, "tableName": tableName}
+        query = {"datasetName": datasetName, "tableName": tableName, "page": page}
     
         results = row_c.find(query)
         out = [
