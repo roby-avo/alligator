@@ -2,6 +2,10 @@ import os
 import sys
 import time
 import traceback
+import warnings
+
+# Disable all warnings
+warnings.filterwarnings("ignore")
 
 import redis
 from keras.models import load_model
