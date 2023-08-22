@@ -1,6 +1,13 @@
 # Alligator: Entity Linking Tool over tabular data
 A.L.L.I.G.A.T.O.R. - Automated Learning and Linking for Intelligent Graph-based Association of Tabular Objects and Relationships
 
+![diagram](https://github.com/roby-avo/alligator/assets/64791054/826191d6-df5c-4c6f-9409-751f5a649532)
+Annotating tables with high quality semantic labels and linking cells in these tables to entities in reference knowledge
+graphs (KGs) serve several downstream applications such as knowledge graph construction, data enrichment, data analytics, and so on. There is an increasing interest in combining algorithms for the automatic annotation of tables with interactive
+applications that let users control and improve the annotations and use them for data enrichment. In this paper we propose a supervised entity linking network that behaves as a re-ranker and score normalizer of for scores returned by off-the-shelves entity retrieval systems. The scores capture link uncertainty and
+can therefore be used to let users validate more uncertain links first and increase the overall quality of the links faster. Experi-
+ments suggest that the proposed approach provides an effective approach to identify most critical decisions and support link revision within a human-in-the-loop data enrichment paradigm.
+
 ![alligator_pipeline](https://github.com/roby-avo/alligator/assets/64791054/71a94186-d1ec-4c7e-b10f-7417d8171054)
 
 Alligator is a versatile tool designed to perform entity linking on tabular data, leveraging machine learning techniques to optimize the process. This tool is intended to reconcile named entity columns (NE-columns) against a Knowledge Graph and also identify literal columns (LIT-columns) which may contain literal values such as numbers, dates, or generic text.
