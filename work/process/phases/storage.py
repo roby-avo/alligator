@@ -42,9 +42,10 @@ class Storage:
                 candidates = cell.candidates()
                 wc = []
                 rank = candidates[0:20] if len(candidates) > 0 else []
-                
-                for candidate in candidates:
-                    candidate["delta"] = round(1 - (candidates[0]["rho"] - candidate["rho"]), 3)  
+                if len(candidates) > 0:
+                    candidates[0]["delta"] = candidates[0]["rho"] - candidates[1]["rho"]
+                for candidate in candidates[1:]:
+                    candidate["delta"] = candidates[0]["rho"] - candidate["rho"]
                     candidate["score"] = round((1-K) * candidate["rho"] + K * candidate["delta"], 3)
                 
                     if (candidates[0]["score"] - candidate["score"]) < THRESHOLD:
