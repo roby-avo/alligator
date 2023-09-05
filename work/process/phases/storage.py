@@ -43,7 +43,7 @@ class Storage:
                 
                 for i, candidate in enumerate(candidates):
                     if i+1 < len(candidates):
-                        candidate["delta"] = round(candidates[0]["rho"] - candidate["rho"], 3)
+                        candidate["delta"] = round(abs(candidate["rho"] - candidates[0]["rho"]), 3)
                     else:
                         candidate["delta"] = 0    
                     candidate["score"] = round((1-K) * candidate["rho"] + K * candidate["delta"], 3)
