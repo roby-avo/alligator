@@ -40,20 +40,16 @@ class Storage:
             rankend_candidates = []
             for cell in row.get_cells():
                 candidates = cell.candidates()
-                
-                for i, candidate in enumerate(candidates):
-                    if i+1 < len(candidates):
-                        candidate["delta"] = round(abs(candidate["rho"] - candidates[0]["rho"]), 3)
-                    else:
-                        candidate["delta"] = 0    
+                wc = []
+                rank = candidates[0:20] if len(candidates) > 0 else []
+                if candidates > 1:
+                    delta = candidates[0]["rho"] - candidates[1]["rho"]
+                for candidate in candidates:
+                    candidate["delta"] = delta  
                     candidate["score"] = round((1-K) * candidate["rho"] + K * candidate["delta"], 3)
                 
-                wc = []
-                candidates = sorted(candidates, key=lambda x: x["score"], reverse=True)
-                rank = candidates[0:20] if len(candidates) > 0 else []
-                for candidate in candidates:
                     if (candidates[0]["score"] - candidate["score"]) < THRESHOLD:
-                            wc.append(candidate)
+                        wc.append(candidate)
                 
                 if len(wc) == 1:
                     cea[str(cell._id_col)] = wc[0]["id"]
