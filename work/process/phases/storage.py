@@ -44,7 +44,7 @@ class Storage:
                 rank = candidates[0:20] if len(candidates) > 0 else []
                 
                 for candidate in candidates:
-                    candidate["delta"] = round(1 - (candidates[0]["rho"] - candidates["rho"]), 3)  
+                    candidate["delta"] = round(1 - (candidates[0]["rho"] - candidate["rho"]), 3)  
                     candidate["score"] = round((1-K) * candidate["rho"] + K * candidate["delta"], 3)
                 
                     if (candidates[0]["score"] - candidate["score"]) < THRESHOLD:
