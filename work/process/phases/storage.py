@@ -44,6 +44,7 @@ class Storage:
                 rank = candidates[0:20] if len(candidates) > 0 else []
                 if len(candidates) > 0:
                     candidates[0]["delta"] = round(candidates[0]["rho"] - candidates[1]["rho"], 3)
+                    candidates[0]["score"] = round((1-K) * candidates[0]["rho"] + K * candidates[0]["delta"], 3)
                 for candidate in candidates[1:]:
                     candidate["delta"] = round(candidates[0]["rho"] - candidate["rho"], 3)
                     candidate["score"] = round((1-K) * candidate["rho"] + K * candidate["delta"], 3)
