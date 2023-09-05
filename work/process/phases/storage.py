@@ -51,7 +51,7 @@ class Storage:
                     if (candidates[0]["score"] - candidate["score"]) < THRESHOLD:
                         wc.append(candidate)
                 
-                if len(wc) > 0:
+                if len(wc) == 1:
                     cea[str(cell._id_col)] = wc[0]["id"]
                     if wc[0]["score"] >= SIGMA:
                         wc[0]["match"] = True
