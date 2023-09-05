@@ -49,7 +49,7 @@ class Storage:
                     candidate["score"] = round((1-K) * candidate["rho"] + K * candidate["delta"], 3)
                 
                 wc = []
-                candidates = sorted(candidates.items(), key=lambda x: x["score"], reverse=True)
+                candidates = sorted(candidates, key=lambda x: x["score"], reverse=True)
                 for candidate in candidates:
                     if (candidates[0]["score"] - candidate["score"]) < THRESHOLD:
                             wc.append(candidate)
