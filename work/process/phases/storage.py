@@ -42,7 +42,7 @@ class Storage:
                 candidates = cell.candidates()
                 wc = []
                 rank = candidates[0:20] if len(candidates) > 0 else []
-                if candidates > 1:
+                if len(candidates) > 1:
                     delta = candidates[0]["rho"] - candidates[1]["rho"]
                 for candidate in candidates:
                     candidate["delta"] = delta  
