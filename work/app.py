@@ -25,6 +25,7 @@ job_active = redis.Redis(host=REDIS_ENDPOINT, db=REDIS_JOB_DB)
 
 mongoDBWrapper = MongoDBWrapper()
 row_c = mongoDBWrapper.get_collection("row")
+candidate_scored_c = mongoDBWrapper.get_collection("candidateScored")
 cea_c = mongoDBWrapper.get_collection("cea")
 cpa_c = mongoDBWrapper.get_collection("cpa")
 cta_c = mongoDBWrapper.get_collection("cta")
@@ -437,6 +438,8 @@ class TableID(Resource):
         query = {"datasetName": datasetName, "tableName": tableName}
         row_c.delete_many(query)
         table_c.delete_one(query)
+        cea_c.delete_many(query)
+        candidate_scored_c.delete_many(query)
         return {}, 200
 
 
