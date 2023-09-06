@@ -43,7 +43,7 @@ class Storage:
                 wc = []
                 rank = candidates[0:20] if len(candidates) > 0 else []
                 if len(candidates) > 0:
-                    if len(candidate) > 1:
+                    if len(candidates) > 1:
                         candidates[0]["delta"] = round(candidates[0]["rho"] - candidates[1]["rho"], 3)
                     else:
                         candidates[0]["delta"] = 0    
