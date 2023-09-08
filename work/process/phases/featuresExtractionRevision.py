@@ -37,7 +37,7 @@ class FeaturesExtractionRevision:
                             if self._cpa[id_col][id_predicate] * predicates[id_predicate] > cpaMax:
                                 cpaMax = self._cpa[id_col][id_predicate] * predicates[id_predicate]
                                 
-                    cta /= total_types if total_types > 0 else 1
+                    cta /= len(candidate["types"]) if total_types > 0 else 1
                     candidate["features"]["cta"] = round(cta, 2)
                     candidate["features"]["ctaMax"] = round(ctaMax, 2)
                     

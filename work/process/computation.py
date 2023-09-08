@@ -21,8 +21,13 @@ from wrapper.mongodb_conn import get_collection
 
 start = time.time()
 
-neural2_path = "./process/ml_models/neural_network2.h5"
-model = load_model(neural2_path)
+pn_neural_path = "./process/ml_models/PN_ALL-2T_2020.h5"
+rn_neural_path = "./process/ml_models/RN_ALL-2T_2020.h5"
+
+pn_model = load_model(pn_neural_path)    
+rn_model = load_model(pn_neural_path)    
+
+
 REDIS_ENDPOINT = os.environ["REDIS_ENDPOINT"]
 REDIS_JOB_DB = int(os.environ["REDIS_JOB_DB"])
 LAMAPI_HOST, LAMAPI_PORT = os.environ["LAMAPI_ENDPOINT"].split(":")
@@ -92,11 +97,11 @@ try:
     l = Lookup(data, lamAPI, target, log_c, kg_reference, limit)
     rows = l.get_rows()
     features = FeauturesExtraction(rows, lamAPI).compute_feautures()
-    Prediction(rows, features, model).compute_prediction("cea")
+    Prediction(rows, features, pn_model).compute_prediction("cea")
     cea_preliking_data = utils.get_cea_pre_linking_data(metadata, rows)
     revision = FeaturesExtractionRevision(rows)
     features = revision.compute_features()
-    Prediction(rows, features, model).compute_prediction("rho")
+    Prediction(rows, features, rn_model).compute_prediction("rho")
     storage = Storage(metadata, cea_preliking_data, rows, revision._cta, revision._cpa_pair, collections)
     storage.store_data()
     end = time.time()
