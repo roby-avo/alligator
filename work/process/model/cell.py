@@ -39,7 +39,7 @@ class Cell:
                 "cpaMax": 0,
                 "cta": 0,
                 "ctaMax": 0,
-                "cea": 0,
+                "rho": 0,
                 "diff": 0
             }
 
