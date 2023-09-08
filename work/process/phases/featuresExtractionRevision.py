@@ -14,9 +14,11 @@ class FeaturesExtractionRevision:
                 id_col = str(cell._id_col)
                 for candidate in cell.candidates():
                     (cta, ctaMax) = (0, 0)
+                    total_types = 0
                     for t in candidate["types"]:
                         if t["id"] in self._cta[id_col]:
                             cta += self._cta[id_col][t["id"]]
+                            total_types += 1
                             if self._cta[id_col][t["id"]] > ctaMax:
                                 ctaMax = self._cta[id_col][t["id"]]
                     
@@ -35,7 +37,7 @@ class FeaturesExtractionRevision:
                             if self._cpa[id_col][id_predicate] * predicates[id_predicate] > cpaMax:
                                 cpaMax = self._cpa[id_col][id_predicate] * predicates[id_predicate]
                                 
-                    cta /= len(candidate["types"]) if len(candidate["types"]) > 0 else 1
+                    cta /= total_types if total_types > 0 else 1
                     candidate["features"]["cta"] = round(cta, 2)
                     candidate["features"]["ctaMax"] = round(ctaMax, 2)
                     
