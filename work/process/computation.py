@@ -21,8 +21,8 @@ from wrapper.mongodb_conn import get_collection
 
 start = time.time()
 
-pn_neural_path = "./process/ml_models/PN_ALL-2T_2020.h5"
-rn_neural_path = "./process/ml_models/RN_ALL-2T_2020.h5"
+pn_neural_path = "./process/ml_models/PN_ALL-Round1_T2D.h5"
+rn_neural_path = "./process/ml_models/RN_ALL-Round1_T2D.h5"
 
 pn_model = load_model(pn_neural_path)    
 rn_model = load_model(pn_neural_path)    
