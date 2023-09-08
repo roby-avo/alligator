@@ -439,6 +439,8 @@ class TableID(Resource):
         row_c.delete_many(query)
         table_c.delete_one(query)
         cea_c.delete_many(query)
+        cta_c.delete_many(query)
+        cpa_c.delete_many(query)
         candidate_scored_c.delete_many(query)
         return {}, 200
 
