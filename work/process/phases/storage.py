@@ -1,4 +1,4 @@
-K = 0.7
+K = 0.6
 THRESHOLD = 0.03
 SIGMA = 0.5
 
