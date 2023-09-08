@@ -397,6 +397,7 @@ class TableID(Resource):
                             "type": candidate["types"],
                             "description": candidate["description"],
                             "match": candidate["match"],
+                            "delta": candidate["delta"],
                             "score": candidate["score"]
                         })
                     out["semanticAnnotations"]["cea"].append({

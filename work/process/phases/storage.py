@@ -44,17 +44,11 @@ class Storage:
                 rank = candidates[0:20] if len(candidates) > 0 else []
                 if len(candidates) > 0:
                     if len(candidates) > 1:
-                        candidates[0]["delta"] = round(candidates[0]["rho"] - candidates[1]["rho"], 3)
+                        candidates[0]["delta"] = round(candidates[0]["rho'"] - candidates[1]["rho'"], 3)
                     else:
-                        candidates[0]["delta"] = 0    
-                    candidates[0]["score"] = round((1-K) * candidates[0]["rho"] + K * candidates[0]["delta"], 3)
+                        candidates[0]["delta"] = 1   
+                    candidates[0]["score"] = round((1-K) * candidates[0]["rho'"] + K * candidates[0]["delta"], 3)
                     wc.append(candidates[0])
-                for candidate in candidates[1:]:
-                    candidate["delta"] = round(candidates[0]["rho"] - candidate["rho"], 3)
-                    candidate["score"] = round((1-K) * candidate["rho"] + K * candidate["delta"], 3)
-                
-                    if (candidates[0]["score"] - candidate["score"]) < THRESHOLD:
-                        wc.append(candidate)
                 
                 if len(wc) == 1:
                     cea[str(cell._id_col)] = wc[0]["id"]
