@@ -73,6 +73,7 @@ class Storage:
                 "datasetName": self._dataset_name,
                 "tableName": self._table_name,
                 "row": row._id_row,
+                "data": row.get_row_text(),
                 "candidates": rankend_candidates,
                 "kgReference": self._kg_reference,
                 "page": self._page

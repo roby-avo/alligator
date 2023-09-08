@@ -59,8 +59,7 @@ class Cell:
                     "features": features,
                     "matches": {str(id_col):[] for id_col in range(n_cols)},
                     "predicates": {str(id_col):{} for id_col in range(n_cols)},
-                    "match": False,
-                    "score": 0
+                    "match": False
                 }
 
         self._candidates = list(candidates_dict.values())
