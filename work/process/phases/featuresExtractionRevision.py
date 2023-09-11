@@ -41,7 +41,7 @@ class FeaturesExtractionRevision:
                     
                     cta = 0
                     cta_entity_freq.sort(reverse=True)
-                    for i in enumerate(0, 5):
+                    for i in range(0, 5):
                         if i >= len(cta_entity_freq):
                             cta += 0 
                         else:
