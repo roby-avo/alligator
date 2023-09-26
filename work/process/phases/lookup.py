@@ -21,11 +21,13 @@ class Lookup:
 
     def _build_row(self, cells, id_row):
         row = Row(id_row, len(cells))
-        row_text = " ".join([str(cell) for cell in cells])
+        cells_as_strings = [str(cell) for cell in cells]
+        row_text = " ".join(cells_as_strings)
         for i, cell in enumerate(cells):
             if i in self._target["NE"]:
                 types = self._types.get(str(i))
-                candidates = self._get_candidates(cell, row_text, id_row, types)
+                description = " ".join(list(set(cells_as_strings) - set([cell])))
+                candidates = self._get_candidates(cell, description, id_row, types)
                 is_subject = i == self._target["SUBJ"]
                 row.add_ne_cell(cell, row_text, candidates, i, is_subject)
             elif i in self._target["LIT"]:
