@@ -2,7 +2,7 @@ version: "3"
 
 services:
   jupyter:
-    image: cremarco/mantis-jupyter
+    image: roby944/jupyter
     container_name: alligator_jupyter
     environment:
       JUPYTER_ENABLE_LAB: "yes"
