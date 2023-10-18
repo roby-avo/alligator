@@ -313,19 +313,6 @@ class Upload(Resource):
         try:
             args = upload_parser.parse_args()
             uploaded_file = args["file"]  # This is FileStorage instance
-            """ result = dataset_c.find_one({"datasetName": datasetName})
-            if result is None:
-                dataset_name = "DEFAULT"
-            else:
-                dataset_name = result["datasetName"] """    
-            """ df = pd.read_csv(uploaded_file)
-            table, header = (df.values.tolist(), list(df.columns))
-            name = uploaded_file.filename.split(".")[0]
-            tables = utils.format_table(name, dataset_name, table, header, kg_reference=kgReference)
-            dataset, tables = utils.fill_tables(tables, row_c)
-            utils.fill_dataset(dataset, dataset_c, table_c)
-            print(tables, flush=True)
-            row_c.insert_many(tables) """
             dataset_name = datasetName
             table_name = uploaded_file.filename.split(".")[0]
             table = TableModel(mongoDBWrapper)
@@ -365,10 +352,17 @@ class TableID(Resource):
         if not validate_token(token):
             return {"Error": "Invalid Token"}, 403
 
+        # if page isn't specified, return all pages
+        """
         if page is None:
             page = 1
+        """
+        # will have to change in the future 
         
-        query = {"datasetName": datasetName, "tableName": tableName, "page": page}
+        if page is None:
+            query = {"datasetName": datasetName, "tableName": tableName}
+        else:    
+            query = {"datasetName": datasetName, "tableName": tableName, "page": page}
     
         results = row_c.find(query)
         out = [
