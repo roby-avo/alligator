@@ -39,7 +39,7 @@ class Cell:
                 "cpaMax": 0,
                 "cta": 0,
                 "ctaMax": 0,
-                "cea": 0,
+                "rho": 0,
                 "diff": 0
             }
 
@@ -59,8 +59,7 @@ class Cell:
                     "features": features,
                     "matches": {str(id_col):[] for id_col in range(n_cols)},
                     "predicates": {str(id_col):{} for id_col in range(n_cols)},
-                    "match": False,
-                    "score": 0
+                    "match": False
                 }
 
         self._candidates = list(candidates_dict.values())

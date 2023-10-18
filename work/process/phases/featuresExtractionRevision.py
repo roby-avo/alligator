@@ -14,9 +14,13 @@ class FeaturesExtractionRevision:
                 id_col = str(cell._id_col)
                 for candidate in cell.candidates():
                     (cta, ctaMax) = (0, 0)
+                    cta_entity_freq = []
+                    total_types = 0
                     for t in candidate["types"]:
                         if t["id"] in self._cta[id_col]:
                             cta += self._cta[id_col][t["id"]]
+                            cta_entity_freq.append(self._cta[id_col][t["id"]])
+                            total_types += 1
                             if self._cta[id_col][t["id"]] > ctaMax:
                                 ctaMax = self._cta[id_col][t["id"]]
                     
@@ -34,8 +38,16 @@ class FeaturesExtractionRevision:
                             cpa += self._cpa[id_col][id_predicate] * predicates[id_predicate]
                             if self._cpa[id_col][id_predicate] * predicates[id_predicate] > cpaMax:
                                 cpaMax = self._cpa[id_col][id_predicate] * predicates[id_predicate]
-                                
-                    cta /= len(candidate["types"]) if len(candidate["types"]) > 0 else 1
+                    
+                    cta = 0
+                    cta_entity_freq.sort(reverse=True)
+                    for i in range(0, 5):
+                        if i >= len(cta_entity_freq):
+                            cta += 0 
+                        else:
+                            cta += cta_entity_freq[i]    
+                    cta /= 5
+                    #cta /= len(candidate["types"]) if total_types > 0 else 1
                     candidate["features"]["cta"] = round(cta, 2)
                     candidate["features"]["ctaMax"] = round(ctaMax, 2)
                     
@@ -43,7 +55,7 @@ class FeaturesExtractionRevision:
                     candidate["features"]["cpa"] = round(cpa, 2)
                     candidate["features"]["cpaMax"] = round(cpaMax, 2)
                     
-                    candidate["features"]["diff"] = round(cell.candidates()[0]["features"]["cea"] - candidate["features"]["cea"], 3)
+                    candidate["features"]["diff"] = round(cell.candidates()[0]["features"]["rho"] - candidate["features"]["rho"], 3)
                     
                     features[int(id_col)].append(list(candidate["features"].values()))
 

@@ -3,6 +3,9 @@ import sys
 import time
 import traceback
 
+# Set the environment variable to suppress TensorFlow warnings
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+
 import redis
 from keras.models import load_model
 
@@ -18,8 +21,13 @@ from wrapper.mongodb_conn import get_collection
 
 start = time.time()
 
-neural2_path = "./process/ml_models/neural_network2.h5"
-model = load_model(neural2_path)
+pn_neural_path = "./process/ml_models/PN_ALL-Round1_T2D.h5"
+rn_neural_path = "./process/ml_models/RN_ALL-Round1_T2D.h5"
+
+pn_model = load_model(pn_neural_path)    
+rn_model = load_model(rn_neural_path)    
+
+
 REDIS_ENDPOINT = os.environ["REDIS_ENDPOINT"]
 REDIS_JOB_DB = int(os.environ["REDIS_JOB_DB"])
 LAMAPI_HOST, LAMAPI_PORT = os.environ["LAMAPI_ENDPOINT"].split(":")
@@ -54,7 +62,7 @@ target = data["target"]
 _id = data["_id"]
 dataset_name = data["datasetName"]
 table_name = data["tableName"]
-
+page = data["page"]
 
 lamAPI = LamAPI(LAMAPI_HOST, LAMAPI_PORT, LAMAPI_TOKEN, kg=kg_reference)
 
@@ -74,7 +82,8 @@ try:
     metadata = {
         "datasetName": dataset_name,
         "tableName": table_name,
-        "kgReference": kg_reference
+        "kgReference": kg_reference,
+        "page": page
     }
 
     collections = {
@@ -88,11 +97,11 @@ try:
     l = Lookup(data, lamAPI, target, log_c, kg_reference, limit)
     rows = l.get_rows()
     features = FeauturesExtraction(rows, lamAPI).compute_feautures()
-    Prediction(rows, features, model).compute_prediction("cea")
+    Prediction(rows, features, pn_model).compute_prediction("rho")
     cea_preliking_data = utils.get_cea_pre_linking_data(metadata, rows)
     revision = FeaturesExtractionRevision(rows)
     features = revision.compute_features()
-    Prediction(rows, features, model).compute_prediction("score")
+    Prediction(rows, features, rn_model).compute_prediction("rho'")
     storage = Storage(metadata, cea_preliking_data, rows, revision._cta, revision._cpa_pair, collections)
     storage.store_data()
     end = time.time()

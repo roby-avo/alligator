@@ -1,4 +1,4 @@
-K = 0.1
+K = 0.6
 THRESHOLD = 0.03
 SIGMA = 0.5
 
@@ -10,6 +10,7 @@ class Storage:
         self._dataset_name = metadata["datasetName"]
         self._table_name = metadata["tableName"]
         self._kg_reference = metadata["kgReference"]
+        self._page = metadata["page"]
         self._cea_prelinking_data = cea_prelinking_data
         self._cea_prelinking_collection = collections["ceaPrelinking"] 
         self._cea_collection = collections["cea"] 
@@ -41,14 +42,17 @@ class Storage:
                 candidates = cell.candidates()
                 wc = []
                 rank = candidates[0:20] if len(candidates) > 0 else []
-                for candidate in candidates:
-                    candidate["omega"] = (1-K) * candidate["score"] + K * (candidates[0]["score"] - candidate["score"])
-                    if (candidates[0]["omega"] - candidate["omega"]) < THRESHOLD:
-                        wc.append(candidate)
+                if len(candidates) > 0:
+                    if len(candidates) > 1:
+                        candidates[0]["delta"] = round(candidates[0]["rho'"] - candidates[1]["rho'"], 3)
+                    else:
+                        candidates[0]["delta"] = 1   
+                    candidates[0]["score"] = round((1-K) * candidates[0]["rho'"] + K * candidates[0]["delta"], 3)
+                    wc.append(candidates[0])
                 
-                if len(wc) > 0:
+                if len(wc) == 1:
                     cea[str(cell._id_col)] = wc[0]["id"]
-                    if wc[0]["omega"] >= SIGMA:
+                    if wc[0]["score"] > SIGMA:
                         wc[0]["match"] = True
                    
                 winning_candidates.append(wc)
@@ -61,15 +65,18 @@ class Storage:
                 "data": row.get_row_text(),
                 "winningCandidates": winning_candidates,
                 "cea": cea,
-                "kgReference": self._kg_reference
+                "kgReference": self._kg_reference,
+                "page": self._page
             })
 
             candidates_scored_data.append({
                 "datasetName": self._dataset_name,
                 "tableName": self._table_name,
                 "row": row._id_row,
+                "data": row.get_row_text(),
                 "candidates": rankend_candidates,
-                "kgReference": self._kg_reference
+                "kgReference": self._kg_reference,
+                "page": self._page
             })
 
         self._cea_collection.insert_many(cea_data)
@@ -88,7 +95,8 @@ class Storage:
             "tableName": self._table_name,
             "winningCandidates": self._cta,
             "cta": cta,
-            "kgReference": self._kg_reference
+            "kgReference": self._kg_reference,
+            "page": self._page
         }
 
         self._cta_collection.insert_one(cta_data)
@@ -111,7 +119,8 @@ class Storage:
             "subjectCol": self._rows[0].get_subject_cell()._id_col if self._rows[0].get_subject_cell() is not None else 0,
             "winningCandidates": self._cpa,
             "cpa": cpa,
-            "kgReference": self._kg_reference
+            "kgReference": self._kg_reference,
+            "page": self._page
         }
 
         self._cpa_collection.insert_one(cpa_data)

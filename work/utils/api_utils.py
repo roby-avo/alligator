@@ -41,6 +41,7 @@ def fill_tables(tables, row_c):
             elif column["tag"] == "LIT":
                 table['target']['LIT'].append(column["idColumn"]) 
                 table['target']['LIT_DATATYPE'][str(column["idColumn"])] = column["datatype"]
+                
         table['status'] = 'TODO'
         table['state'] = 'READY'
         dataset_name = table['datasetName']

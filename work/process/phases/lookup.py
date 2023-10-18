@@ -7,7 +7,7 @@ class Lookup:
         self._header = data.get("header", [])
         self._dataset_name = data["datasetName"]
         self._table_name = data["tableName"]
-        self._types = data["types"]     
+        self._types = data.get("types", {})    
         self._lamAPI = lamAPI
         self._target = target
         self._log_c = log_c
@@ -21,11 +21,13 @@ class Lookup:
 
     def _build_row(self, cells, id_row):
         row = Row(id_row, len(cells))
-        row_text = " ".join([str(cell) for cell in cells])
+        cells_as_strings = [str(cell) for cell in cells]
+        row_text = " ".join(cells_as_strings)
         for i, cell in enumerate(cells):
             if i in self._target["NE"]:
                 types = self._types.get(str(i))
-                candidates = self._get_candidates(cell, id_row, types)
+                description = " ".join(list(set(cells_as_strings) - set([cell])))
+                candidates = self._get_candidates(cell, description, id_row, types)
                 is_subject = i == self._target["SUBJ"]
                 row.add_ne_cell(cell, row_text, candidates, i, is_subject)
             elif i in self._target["LIT"]:
@@ -35,15 +37,15 @@ class Lookup:
         return row
 
     
-    def _get_candidates(self, cell, id_row, types):
+    def _get_candidates(self, cell, row_text, id_row, types):
         candidates = []
         result = None
         try:
             if len(str(cell)) > 0 and str(cell).lower() != "nan":
-                result = self._lamAPI.lookup(cell, limit=100)
+                result = self._lamAPI.lookup(cell, description=row_text, limit=100)
                 if cell not in result:
                     raise Exception("Error from lamAPI")
-            candidates = result[cell]    
+                candidates = result[cell]    
         except Exception as e:
             self._log_c.insert_one({
                 'datasetName': self._dataset_name,

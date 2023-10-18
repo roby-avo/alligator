@@ -10,7 +10,9 @@ from werkzeug.datastructures import FileStorage
 
 import utils.api_utils as utils
 from indexing import index
-from process.wrapper.mongodb_conn import get_collection
+from process.wrapper.Database import MongoDBWrapper
+from utils.Dataset import DatasetModel
+from utils.Table import TableModel
 
 index.create_index()
 
@@ -21,13 +23,14 @@ API_TOKEN = os.environ["API_TOKEN"]
 
 job_active = redis.Redis(host=REDIS_ENDPOINT, db=REDIS_JOB_DB)
 
- 
-row_c = get_collection("row")
-cea_c = get_collection("cea")
-cpa_c = get_collection("cpa")
-cta_c = get_collection("cta")
-dataset_c = get_collection("dataset")
-table_c = get_collection("table")
+mongoDBWrapper = MongoDBWrapper()
+row_c = mongoDBWrapper.get_collection("row")
+candidate_scored_c = mongoDBWrapper.get_collection("candidateScored")
+cea_c = mongoDBWrapper.get_collection("cea")
+cpa_c = mongoDBWrapper.get_collection("cpa")
+cta_c = mongoDBWrapper.get_collection("cta")
+dataset_c = mongoDBWrapper.get_collection("dataset")
+table_c = mongoDBWrapper.get_collection("table")
 
 app = Flask(__name__)
 CORS(app)
@@ -147,9 +150,16 @@ class CreateWithArray(Resource):
             return {"Error": "Invalid Json"}, 400
         
         try:
-            dataset, tables = utils.fill_tables(tables, row_c)
+            """ dataset, tables = utils.fill_tables(tables, row_c)
             utils.fill_dataset(dataset, dataset_c, table_c)
-            row_c.insert_many(tables)    
+            row_c.insert_many(tables) """ 
+            table = TableModel(mongoDBWrapper)
+            table.parse_json(tables)
+            table.store_tables()
+            dataset = DatasetModel(mongoDBWrapper, table.table_metadata)
+            dataset.store_datasets()
+            tables = table.get_data()
+            mongoDBWrapper.get_collection("row").insert_many(tables)
             job_active.delete("STOP")
             out = [{"id": str(table["_id"]), "datasetName": table["datasetName"], "tableName": table["tableName"]} for table in tables]
         except Exception as e:
@@ -293,9 +303,9 @@ class Upload(Resource):
         parser.add_argument("kgReference", type=str, help="variable 1", location="args")
         parser.add_argument("token", type=str, help="variable 2", location="args")
         args = parser.parse_args()
-        kgReference = "wikidata"
+        kg_reference = "wikidata"
         if args["kgReference"] is not None:
-            kgReference = args["kgReference"]
+            kg_reference = args["kgReference"]
         token = args["token"]
         if not validate_token(token):
             return {"Error": "Invalid Token"}, 403
@@ -303,19 +313,15 @@ class Upload(Resource):
         try:
             args = upload_parser.parse_args()
             uploaded_file = args["file"]  # This is FileStorage instance
-            result = dataset_c.find_one({"datasetName": datasetName})
-            if result is None:
-                dataset_name = "DEFAULT"
-            else:
-                dataset_name = result["datasetName"]    
-            df = pd.read_csv(uploaded_file)
-            table, header = (df.values.tolist(), list(df.columns))
-            name = uploaded_file.filename.split(".")[0]
-            tables = utils.format_table(name, dataset_name, table, header, kg_reference=kgReference)
-            dataset, tables = utils.fill_tables(tables, row_c)
-            utils.fill_dataset(dataset, dataset_c, table_c)
-            print(tables, flush=True)
-            row_c.insert_many(tables)    
+            dataset_name = datasetName
+            table_name = uploaded_file.filename.split(".")[0]
+            table = TableModel(mongoDBWrapper)
+            table.parse_csv(uploaded_file, dataset_name, table_name, kg_reference)
+            table.store_tables()
+            dataset = DatasetModel(mongoDBWrapper, table.table_metadata)
+            dataset.store_datasets()
+            tables = table.get_data()
+            mongoDBWrapper.get_collection("row").insert_many(tables)    
             job_active.delete("STOP")
             out = [{"id": str(table["_id"]),  "datasetName": table["datasetName"], "tableName": table["tableName"]} for table in tables]
         except Exception as e:
@@ -329,28 +335,41 @@ class Upload(Resource):
     responses={200: "OK", 404: "Not found",
                400: "Bad request", 403: "Invalid token"},
     params={ 
-        "token": "token api key"
+        "page": " The page number of the results. It starts from 1",
+        "token": " Your API key token for authentication"
     }
 )
 class TableID(Resource):
     def get(self, datasetName, tableName):
         parser = reqparse.RequestParser()
+        parser.add_argument("page", type=int, help="variable 1", location="args")
         parser.add_argument("token", type=str, help="variable 1", location="args")
         args = parser.parse_args()
+        page = args["page"]
         token = args["token"]
         #stringId = args["stringId"] == "true"
        
         if not validate_token(token):
             return {"Error": "Invalid Token"}, 403
 
+        # if page isn't specified, return all pages
+        """
+        if page is None:
+            page = 1
+        """
+        # will have to change in the future 
         
-        query = {"datasetName": datasetName, "tableName": tableName}
+        if page is None:
+            query = {"datasetName": datasetName, "tableName": tableName}
+        else:    
+            query = {"datasetName": datasetName, "tableName": tableName, "page": page}
     
         results = row_c.find(query)
         out = [
             {
                 "datasetName": result["datasetName"],
                 "tableName": result["tableName"],
+                "header": result["header"],
                 "rows": result["rows"],
                 "semanticAnnotations": {"cea": [], "cpa": [], "cta": []},
                 "metadata": result.get("metadata", []),
@@ -365,13 +384,14 @@ class TableID(Resource):
                 winning_candidates = result["winningCandidates"]
                 for id_col, candidates in enumerate(winning_candidates):
                     entities = []
-                    for candidate in candidates:
+                    for candidate in candidates[0:3]:
                         entities.append({
                             "id": candidate["id"],
                             "name": candidate["name"],
                             "type": candidate["types"],
                             "description": candidate["description"],
                             "match": candidate["match"],
+                            "delta": candidate["delta"],
                             "score": candidate["score"]
                         })
                     out["semanticAnnotations"]["cea"].append({
@@ -413,6 +433,10 @@ class TableID(Resource):
         query = {"datasetName": datasetName, "tableName": tableName}
         row_c.delete_many(query)
         table_c.delete_one(query)
+        cea_c.delete_many(query)
+        cta_c.delete_many(query)
+        cpa_c.delete_many(query)
+        candidate_scored_c.delete_many(query)
         return {}, 200
 
 
