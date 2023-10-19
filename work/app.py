@@ -377,9 +377,22 @@ class TableID(Resource):
             }
             for result in results
         ]
+
+        buffer = out[0]
+        for o in out[1:]:
+            buffer["rows"] += o["rows"]
+        buffer["nrows"] = len(buffer["rows"])
+
         if len(out) > 0:
-            out = out[0]
+            if page is None:
+                out = buffer
+            else:
+                out = out[0]
+            doing = True
             results = cea_c.find(query)
+            total = cea_c.count_documents(query)
+            if total == len(out["rows"]):
+                doing = False
             for result in results:
                 winning_candidates = result["winningCandidates"]
                 for id_col, candidates in enumerate(winning_candidates):
@@ -399,6 +412,7 @@ class TableID(Resource):
                         "idRow": result["row"],
                         "entity": entities
                     })
+            out["status"] = "DONE" if doing is False else "DOING"        
             results = cpa_c.find(query)
             for result in results:
                 winning_predicates = result["cpa"]
