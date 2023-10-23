@@ -91,6 +91,7 @@ class TableModel:
         # Split DataFrame rows into chunks of CHUNK_SIZE and create new table entries for each chunk
         num_rows = len(df)
         if num_rows >= self.SPLIT_THRESHOLD:
+            offset = 1
             chunks = [df.iloc[i: i + self.CHUNK_SIZE] for i in range(0, num_rows, self.CHUNK_SIZE)]
             
             # If the last chunk is smaller than MIN_ROWS, combine it with the previous chunk
@@ -100,9 +101,10 @@ class TableModel:
             
             for page, chunk_df in enumerate(chunks):
                 new_entry = table_obj.copy()
-                new_entry['rows'] = [{"idRow": idx + 1, "data": row_data} for idx, row_data in enumerate(chunk_df.values.tolist())]
+                new_entry['rows'] = [{"idRow": idx + offset, "data": row_data} for idx, row_data in enumerate(chunk_df.values.tolist())]
                 new_entry['page'] = page + 1
                 self.data.append(new_entry)
+                offset = new_entry['rows'][-1]["idRow"] + 1
         else:
             table_obj['rows'] = [{"idRow": idx + 1, "data": row_data} for idx, row_data in enumerate(df.values.tolist())]
             self.data.append(table_obj)
