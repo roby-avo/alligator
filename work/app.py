@@ -466,7 +466,7 @@ class TableID(Resource):
             cta_c.delete_many(query)
             cpa_c.delete_many(query)
             candidate_scored_c.delete_many(query)
-            return {"result": result}, 200
+            return {"datasetName": datasetName, "tableName": tableName, "deleted": True}, 200
         except Exception as e:
             print({"traceback": traceback.format_exc()}, flush=True)
             return {"status": "Error", "message": str(e)}, 400
