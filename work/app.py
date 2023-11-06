@@ -149,6 +149,10 @@ class CreateWithArray(Resource):
 
         try:
             tables = request.get_json()
+            for table in tables:
+                dataset_name = table["datasetName"]
+                table_name = table["tableName"]
+                out.append({"datasetName": dataset_name, "tableName": table_name})
             """ for table in tables:
                 dataset_name = table["datasetName"]
                 table_name = table["tableName"]
