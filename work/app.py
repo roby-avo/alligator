@@ -149,13 +149,13 @@ class CreateWithArray(Resource):
 
         try:
             tables = request.get_json()
-            for table in tables:
+            """ for table in tables:
                 dataset_name = table["datasetName"]
                 table_name = table["tableName"]
                 response = request.get(f"http://localhost:5000/dataset/{dataset_name}/table/{table_name}?page=1&token={token}")
                 response = response.json()
                 if response["status"] == "DOING":
-                    out.append({"datasetName": dataset_name, "tableName": table_name})
+                    out.append({"datasetName": dataset_name, "tableName": table_name}) """
         except:
             print({"traceback": traceback.format_exc()}, flush=True)
             return {"Error": "Invalid Json"}, 400
