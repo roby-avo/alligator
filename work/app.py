@@ -144,10 +144,21 @@ class CreateWithArray(Resource):
         token = args["token"]
         if not validate_token(token):
             return {"Error": "Invalid Token"}, 403
+        
+        out = []
+
         try:
             tables = request.get_json()
+            for table in tables:
+                dataset_name = table["datasetName"]
+                table_name = table["tableName"]
+                response = request.get(f"http://localhost:5000/dataset/{dataset_name}/table/{table_name}?page=1&token={token}")
+                response = response.json()
+                if response["status"] == "DOING":
+                    out.append({"datasetName": dataset_name, "tableName": table_name})
         except:
             return {"Error": "Invalid Json"}, 400
+        
         
         try:
             table = TableModel(mongoDBWrapper)
@@ -158,13 +169,13 @@ class CreateWithArray(Resource):
             tables = table.get_data()
             mongoDBWrapper.get_collection("row").insert_many(tables)
             job_active.delete("STOP")
-            out = [{"id": str(table["_id"]), "datasetName": table["datasetName"], "tableName": table["tableName"]} for table in tables]
+            #out = [{"id": str(table["_id"]), "datasetName": table["datasetName"], "tableName": table["tableName"]} for table in tables]
         except Exception as e:
             print({"traceback": traceback.format_exc()}, flush=True)
-            return {"status": "Error", "message": str(e)}, 400
+            #return {"status": "Error", "message": str(e)}, 400
 
         return {"status": "Ok", "tables": out}, 200
-
+   
 
 @ds.route("")
 @ds.doc(
