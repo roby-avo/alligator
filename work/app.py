@@ -149,17 +149,7 @@ class CreateWithArray(Resource):
 
         try:
             tables = request.get_json()
-            for table in tables:
-                dataset_name = table["datasetName"]
-                table_name = table["tableName"]
-                out.append({"datasetName": dataset_name, "tableName": table_name})
-            """ for table in tables:
-                dataset_name = table["datasetName"]
-                table_name = table["tableName"]
-                response = request.get(f"http://localhost:5000/dataset/{dataset_name}/table/{table_name}?page=1&token={token}")
-                response = response.json()
-                if response["status"] == "DOING":
-                    out.append({"datasetName": dataset_name, "tableName": table_name}) """
+            out = [{"datasetName": table["datasetName"], "tableName": table["tableName"]} for table in tables]
         except:
             print({"traceback": traceback.format_exc()}, flush=True)
             return {"Error": "Invalid Json"}, 400
@@ -174,7 +164,7 @@ class CreateWithArray(Resource):
             tables = table.get_data()
             mongoDBWrapper.get_collection("row").insert_many(tables)
             job_active.delete("STOP")
-            #out = [{"id": str(table["_id"]), "datasetName": table["datasetName"], "tableName": table["tableName"]} for table in tables]
+            out = [{"id": str(table["_id"]), "datasetName": table["datasetName"], "tableName": table["tableName"]} for table in tables]
         except Exception as e:
             print({"traceback": traceback.format_exc()}, flush=True)
             #return {"status": "Error", "message": str(e)}, 400
@@ -391,78 +381,85 @@ class TableID(Resource):
             query = {"datasetName": datasetName, "tableName": tableName, "page": page}
     
         try:
-            results = row_c.find(query)
-            out = [
-                {
-                    "datasetName": result["datasetName"],
-                    "tableName": result["tableName"],
-                    "header": result["header"],
-                    "rows": result["rows"],
-                    "semanticAnnotations": {"cea": [], "cpa": [], "cta": []},
-                    "metadata": result.get("metadata", []),
-                    "status": result["status"]
-                }
-                for result in results
-            ]
-
-            buffer = out[0]
-            for o in out[1:]:
-                buffer["rows"] += o["rows"]
-            buffer["nrows"] = len(buffer["rows"])
-
-            if len(out) > 0:
-                if page is None:
-                    out = buffer
-                else:
-                    out = out[0]
-                doing = True
-                results = cea_c.find(query)
-                total = cea_c.count_documents(query)
-                if total == len(out["rows"]):
-                    doing = False
-                for result in results:
-                    winning_candidates = result["winningCandidates"]
-                    for id_col, candidates in enumerate(winning_candidates):
-                        entities = []
-                        for candidate in candidates[0:3]:
-                            entities.append({
-                                "id": candidate["id"],
-                                "name": candidate["name"],
-                                "type": candidate["types"],
-                                "description": candidate["description"],
-                                "match": candidate["match"],
-                                "delta": candidate["delta"],
-                                "score": candidate["score"]
-                            })
-                        out["semanticAnnotations"]["cea"].append({
-                            "idColumn": id_col,
-                            "idRow": result["row"],
-                            "entity": entities
-                        })
-                out["status"] = "DONE" if doing is False else "DOING"        
-                results = cpa_c.find(query)
-                for result in results:
-                    winning_predicates = result["cpa"]
-                    for id_source_column in winning_predicates:
-                        for id_target_column in winning_predicates[id_source_column]:
-                            out["semanticAnnotations"]["cpa"].append({
-                                "idSourceColumn": id_source_column,
-                                "idTargetColumn": id_target_column,
-                                "predicate": winning_predicates[id_source_column][id_target_column]
-                            })
-                results = cta_c.find(query)
-                for result in results:
-                    winning_types = result["cta"]
-                    for id_col in winning_types:
-                        out["semanticAnnotations"]["cta"].append({
-                            "idColumn": int(id_col),
-                            "types": [winning_types[id_col]]
-                        })        
+            out = self._get_table(datasetName, tableName, page)
             return out
         except Exception as e:
             print({"traceback": traceback.format_exc()}, flush=True)
             return {"status": "Error", "message": str(e)}, 400
     
+
+    def _get_table(self, dataset_name, table_name, page=None):
+        query = {"datasetName": dataset_name, "tableName": table_name}
+        if page is not None:
+            query["page"] = page
+        results = row_c.find(query)    
+        out = [
+            {
+                "datasetName": result["datasetName"],
+                "tableName": result["tableName"],
+                "header": result["header"],
+                "rows": result["rows"],
+                "semanticAnnotations": {"cea": [], "cpa": [], "cta": []},
+                "metadata": result.get("metadata", []),
+                "status": result["status"]
+            }
+            for result in results
+        ]
+
+        buffer = out[0]
+        for o in out[1:]:
+            buffer["rows"] += o["rows"]
+        buffer["nrows"] = len(buffer["rows"])
+
+        if len(out) > 0:
+            if page is None:
+                out = buffer
+            else:
+                out = out[0]
+            doing = True
+            results = cea_c.find(query)
+            total = cea_c.count_documents(query)
+            if total == len(out["rows"]):
+                doing = False
+            for result in results:
+                winning_candidates = result["winningCandidates"]
+                for id_col, candidates in enumerate(winning_candidates):
+                    entities = []
+                    for candidate in candidates[0:3]:
+                        entities.append({
+                            "id": candidate["id"],
+                            "name": candidate["name"],
+                            "type": candidate["types"],
+                            "description": candidate["description"],
+                            "match": candidate["match"],
+                            "delta": candidate["delta"],
+                            "score": candidate["score"]
+                        })
+                    out["semanticAnnotations"]["cea"].append({
+                        "idColumn": id_col,
+                        "idRow": result["row"],
+                        "entity": entities
+                    })
+            out["status"] = "DONE" if doing is False else "DOING"        
+            results = cpa_c.find(query)
+            for result in results:
+                winning_predicates = result["cpa"]
+                for id_source_column in winning_predicates:
+                    for id_target_column in winning_predicates[id_source_column]:
+                        out["semanticAnnotations"]["cpa"].append({
+                            "idSourceColumn": id_source_column,
+                            "idTargetColumn": id_target_column,
+                            "predicate": winning_predicates[id_source_column][id_target_column]
+                        })
+            results = cta_c.find(query)
+            for result in results:
+                winning_types = result["cta"]
+                for id_col in winning_types:
+                    out["semanticAnnotations"]["cta"].append({
+                        "idColumn": int(id_col),
+                        "types": [winning_types[id_col]]
+                    })            
+        return out
         
     def delete(self, datasetName, tableName):
         parser = reqparse.RequestParser()
@@ -474,19 +471,22 @@ class TableID(Resource):
         if not validate_token(token):
             return {"Error": "Invalid Token"}, 403
 
-        query = {"datasetName": datasetName, "tableName": tableName}
         try:
-            result = row_c.delete_many(query)
-            table_c.delete_one(query)
-            cea_c.delete_many(query)
-            cta_c.delete_many(query)
-            cpa_c.delete_many(query)
-            candidate_scored_c.delete_many(query)
+            self._delete_table(datasetName, tableName)
             return {"datasetName": datasetName, "tableName": tableName, "deleted": True}, 200
         except Exception as e:
             print({"traceback": traceback.format_exc()}, flush=True)
             return {"status": "Error", "message": str(e)}, 400
 
+    def _delete_table(self, dataset_name, table_name):
+        query = {"datasetName": dataset_name, "tableName": table_name}
+        row_c.delete_many(query)
+        table_c.delete_one(query)
+        cea_c.delete_many(query)
+        cta_c.delete_many(query)
+        cpa_c.delete_many(query)
+        candidate_scored_c.delete_many(query)
+       
 
 if __name__ == "__main__":
     app.run(debug=True)

@@ -9,9 +9,9 @@ headers = {
 LAMAPI_TOKEN =  os.environ["LAMAPI_TOKEN"]
 
 class LamAPI():
-    def __init__(self, LAMAPI_HOST, LAMAPI_HOST_PORT, client_key,  response_format="json", kg="wikidata") -> None:
+    def __init__(self, LAMAPI_HOST, client_key,  response_format="json", kg="wikidata") -> None:
         self.format = response_format
-        base_url = f"http://{LAMAPI_HOST}:{LAMAPI_HOST_PORT}/"
+        base_url = LAMAPI_HOST
         self._url = URLs(base_url, response_format=response_format)
         self.client_key = client_key
         self.kg = kg

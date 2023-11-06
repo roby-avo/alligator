@@ -1,7 +1,10 @@
 import traceback
 from model.row import Row
+import json
 
-
+with open("./process/cache_candidates.json") as f:
+    cache = json.loads(f.read())
+ 
 class Lookup:
     def __init__(self, data:object, lamAPI, target, log_c, kg_ref="wikidata", limit=100):
         self._header = data.get("header", [])
@@ -27,7 +30,12 @@ class Lookup:
             if i in self._target["NE"]:
                 types = self._types.get(str(i))
                 description = " ".join(list(set(cells_as_strings) - set([cell])))
-                candidates = self._get_candidates(cell, description, id_row, types)
+
+                if cell in cache:
+                    candidates = cache.get(cell, [])
+                else:
+                    candidates = self._get_candidates(cell, description, id_row, types)
+                
                 is_subject = i == self._target["SUBJ"]
                 row.add_ne_cell(cell, row_text, candidates, i, is_subject)
             elif i in self._target["LIT"]:
