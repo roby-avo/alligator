@@ -1,28 +1,33 @@
+# Import necessary packages and modules
+import os  # For interacting with the operating system
+import traceback  # To provide details of exceptions
+import pandas as pd  # Popular data manipulation package
+import redis  # Redis database interface
+from flask import Flask, request  # Flask web framework components
+from flask_cors import CORS  # To handle Cross-Origin Resource Sharing (CORS)
+from flask_restx import Api, Resource, fields, reqparse  # Extensions for Flask to ease REST API development
+from werkzeug.datastructures import FileStorage  # To handle file storage in Flask
 
-import os
-import traceback
-import pandas as pd
-import redis
-from flask import Flask, request
-from flask_cors import CORS
-from flask_restx import Api, Resource, fields, reqparse
-from werkzeug.datastructures import FileStorage
-
+# Local utility modules for API functionality
 import utils.api_utils as utils
-from indexing import index
-from process.wrapper.Database import MongoDBWrapper
-from utils.Dataset import DatasetModel
-from utils.Table import TableModel
+from indexing import index  # Module for indexing functionality
+from process.wrapper.Database import MongoDBWrapper  # MongoDB database wrapper
+from utils.Dataset import DatasetModel  # Dataset utility model
+from utils.Table import TableModel  # Table utility model
 
+# Create an index using the `index` module
 index.create_index()
 
-REDIS_ENDPOINT = os.environ["REDIS_ENDPOINT"]
-REDIS_JOB_DB = int(os.environ["REDIS_JOB_DB"])
+# Retrieve environment variables for Redis configuration and API token
+REDIS_ENDPOINT = os.environ["REDIS_ENDPOINT"]  # Endpoint for Redis connection
+REDIS_JOB_DB = int(os.environ["REDIS_JOB_DB"])  # Redis database number for jobs
 
-API_TOKEN = os.environ["API_TOKEN"]
+API_TOKEN = os.environ["API_TOKEN"]  # API token for authentication
 
+# Initialize Redis client for tracking active jobs
 job_active = redis.Redis(host=REDIS_ENDPOINT, db=REDIS_JOB_DB)
 
+# Initialize MongoDB wrapper and get collections for different data models
 mongoDBWrapper = MongoDBWrapper()
 row_c = mongoDBWrapper.get_collection("row")
 candidate_scored_c = mongoDBWrapper.get_collection("candidateScored")
@@ -32,24 +37,30 @@ cta_c = mongoDBWrapper.get_collection("cta")
 dataset_c = mongoDBWrapper.get_collection("dataset")
 table_c = mongoDBWrapper.get_collection("table")
 
+# Initialize Flask application and enable CORS
 app = Flask(__name__)
 CORS(app)
+
+# Read API description from a text file
 with open("data.txt") as f:
     description = f.read()
 
+# Set up the API with version, title, and description read from the file
 api = Api(app, version="1.0", title="Alligator", description=description)
+
+# Define a namespace for dataset related operations
 ds = api.namespace("dataset", description="Dataset namespace")
 
-
+# Initialize a parser for file uploads
 upload_parser = api.parser()
 upload_parser.add_argument("file", location="files",
                            type=FileStorage, required=True)
 
-
+# Define a function to validate the provided token against the expected API token
 def validate_token(token):
     return token == API_TOKEN
 
-
+# Define data models for the API to serialize and deserialize data
 rows_fields = api.model("Rows", {
     "idRow": fields.Integer,
     "data": fields.List(fields.String)
@@ -119,6 +130,7 @@ table_list_field = api.model("TablesList",  {
 })
 
 
+# Define a new route '/createWithArray' to handle batch creation of resources
 @ds.route("/createWithArray")
 @ds.doc(
     responses={200: "OK", 404: "Not found",
@@ -259,7 +271,6 @@ class Dataset(Resource):
 )
 class DatasetID(Resource):
     def get(self, datasetName):
-        #results = row_c.aggregate([{"$match":{"dataset":dataset}}, {"$group": {"_id":{"name":"$name"}}}])
         parser = reqparse.RequestParser()
         parser.add_argument("token", type=str, help="variable 1", location="args")
         parser.add_argument("page", type=int, help="variable 2", location="args")
@@ -363,7 +374,7 @@ class TableID(Resource):
         args = parser.parse_args()
         page = args["page"]
         token = args["token"]
-        #stringId = args["stringId"] == "true"
+        
        
         if not validate_token(token):
             return {"Error": "Invalid Token"}, 403
@@ -375,17 +386,12 @@ class TableID(Resource):
         """
         # will have to change in the future 
         
-        if page is None:
-            query = {"datasetName": datasetName, "tableName": tableName}
-        else:    
-            query = {"datasetName": datasetName, "tableName": tableName, "page": page}
-    
         try:
             out = self._get_table(datasetName, tableName, page)
             return out
         except Exception as e:
             print({"traceback": traceback.format_exc()}, flush=True)
-            return {"status": "Error", "message": str(e)}, 400
+            return {"status": "Error", "message": str(e)}, 404
     
 
     def _get_table(self, dataset_name, table_name, page=None):
@@ -466,7 +472,6 @@ class TableID(Resource):
         parser.add_argument("token", type=str, help="variable 1", location="args")
         args = parser.parse_args()
         token = args["token"]
-        #stringId = args["stringId"] == "true"
        
         if not validate_token(token):
             return {"Error": "Invalid Token"}, 403
