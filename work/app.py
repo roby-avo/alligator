@@ -483,7 +483,7 @@ class TableID(Resource):
                             "description": candidate["description"],
                             "match": candidate["match"],
                             "delta": candidate.get("delta"),
-                            "score": candidate.get("score")
+                            "score": candidate.get("rho'")
                         })
                     out["semanticAnnotations"]["cea"].append({
                         "idColumn": id_col,
