@@ -15,7 +15,7 @@ from phases.featuresExtractionRevision import FeaturesExtractionRevision
 from phases.feauturesExtraction import FeauturesExtraction
 from phases.lookup import Lookup
 from phases.prediction import Prediction
-from phases.storage import Storage
+from phases.decision import Decision
 from wrapper.lamAPI import LamAPI
 from wrapper.mongodb_conn import get_collection
 
@@ -102,7 +102,7 @@ try:
     revision = FeaturesExtractionRevision(rows)
     features = revision.compute_features()
     Prediction(rows, features, rn_model).compute_prediction("rho'")
-    storage = Storage(metadata, cea_preliking_data, rows, revision._cta, revision._cpa_pair, collections)
+    storage = Decision(metadata, cea_preliking_data, rows, revision._cta, revision._cpa_pair, collections)
     storage.store_data()
     end = time.time()
     execution_time = round(end - start, 2)

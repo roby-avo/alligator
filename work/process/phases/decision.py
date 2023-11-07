@@ -2,7 +2,7 @@ K = 0.6
 THRESHOLD = 0.03
 SIGMA = 0.5
 
-class Storage:
+class Decision:
     def __init__(self, metadata: dict, cea_prelinking_data, rows, cta, cpa, collections: dict):
         self._rows = rows
         self._cta = cta
@@ -54,7 +54,10 @@ class Storage:
                     cea[str(cell._id_col)] = wc[0]["id"]
                     if wc[0]["score"] > SIGMA:
                         wc[0]["match"] = True
-                   
+                        wc.extend(candidates[1:3])
+                    else:    
+                        wc.extend(candidates[1:5])
+
                 winning_candidates.append(wc)
                 rankend_candidates.append(rank)
 
