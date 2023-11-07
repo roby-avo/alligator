@@ -143,12 +143,13 @@ class CreateWithArray(Resource):
     @ds.doc(
         body = [table_list_field],
         description="""
-                     Upload a sample of table to annotate
+                        Upload a list of tables to annotate.
                     """
     )
     def post(self):
         """
-            Upload table data using array
+            Receives an array of table data for bulk processing.
+            This endpoint is used for annotating multiple tables in a single API call.
         """
         parser = reqparse.RequestParser()
         parser.add_argument("token", type=str, help="variable 1", location="args")
@@ -186,19 +187,44 @@ class CreateWithArray(Resource):
 
 @ds.route("")
 @ds.doc(
-    responses={200: "OK", 404: "Not found",
-               400: "Bad request", 403: "Invalid token"},
-    params={ 
-        "token": {"description": "token key api",
-                                "type": "string", "required": True}
+    responses={
+        200: "Success: The requested data was found and returned.",
+        404: "Not Found: The requested resource was not found on the server.",
+        400: "Bad Request: The request was invalid or cannot be served.",
+        403: "Forbidden: Invalid token or lack of access rights to the requested resource."
     },
-    description="""
-                """
+    params={
+        "token": {
+            "description": "An API token for authentication and authorization purposes.",
+            "type": "string",
+            "required": True
+        }
+    },
+    description="Operations related to datasets."
 )
 class Dataset(Resource):
-    @ds.doc(params={"page": {"description": "Number of page",
-                                "type": "int", "default": 1}})
+    @ds.doc(
+        params={
+            "page": {
+                "description": "The page number for paginated results. If not specified, defaults to 1.",
+                "type": "int",
+                "default": 1
+            }
+        },
+        description="Retrieve datasets with pagination. Each page contains a subset of datasets."
+    )
     def get(self):
+        """
+            Retrieves a paginated list of datasets. It uses the 'page' parameter to return the corresponding subset of datasets.
+            Requires a valid token for authentication.
+
+            Parameters:
+            - token (str): An API token provided in the query string for access authorization.
+            - page (int, optional): The page number for pagination, defaults to 1 if not specified.
+
+            Returns:
+            - A list of dataset summaries with their status and processing information, or an error message with an HTTP status code.
+        """
         parser = reqparse.RequestParser()
         parser.add_argument("token", type=str, help="variable 1", location="args")
         parser.add_argument("page", type=str, help="variable 2", location="args")
@@ -232,9 +258,27 @@ class Dataset(Resource):
             return {"status": "Error", "message": str(e)}, 400
 
     
-    @ds.doc(params={"datasetName": {"description": "Created dataset",
-                                "type": "string", "required": True}})
+    @ds.doc(
+        params={
+            "datasetName": {
+                "description": "The name of the dataset to be created.",
+                "type": "string",
+                "required": True
+            }
+        },
+        description="Create a new dataset with the specified name."
+    )
     def post(self):
+        """
+            Creates a new dataset entry with the given name. Validates the provided token and adds an entry to the database.
+
+            Parameters:
+            - token (str): An API token provided in the query string for access authorization.
+            - datasetName (str): The name of the new dataset to be created.
+
+            Returns:
+            - A confirmation message with the status of the dataset creation, or an error message with an HTTP status code.
+        """
         parser = reqparse.RequestParser()
         parser.add_argument("token", type=str, help="variable 1", location="args")
         parser.add_argument("datasetName", type=str, help="variable 2", location="args")
