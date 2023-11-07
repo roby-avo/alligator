@@ -1,28 +1,33 @@
+# Import necessary packages and modules
+import os  # For interacting with the operating system
+import traceback  # To provide details of exceptions
+import pandas as pd  # Popular data manipulation package
+import redis  # Redis database interface
+from flask import Flask, request  # Flask web framework components
+from flask_cors import CORS  # To handle Cross-Origin Resource Sharing (CORS)
+from flask_restx import Api, Resource, fields, reqparse  # Extensions for Flask to ease REST API development
+from werkzeug.datastructures import FileStorage  # To handle file storage in Flask
 
-import os
-import traceback
-import pandas as pd
-import redis
-from flask import Flask, request
-from flask_cors import CORS
-from flask_restx import Api, Resource, fields, reqparse
-from werkzeug.datastructures import FileStorage
-
+# Local utility modules for API functionality
 import utils.api_utils as utils
-from indexing import index
-from process.wrapper.Database import MongoDBWrapper
-from utils.Dataset import DatasetModel
-from utils.Table import TableModel
+from indexing import index  # Module for indexing functionality
+from process.wrapper.Database import MongoDBWrapper  # MongoDB database wrapper
+from utils.Dataset import DatasetModel  # Dataset utility model
+from utils.Table import TableModel  # Table utility model
 
+# Create an index using the `index` module
 index.create_index()
 
-REDIS_ENDPOINT = os.environ["REDIS_ENDPOINT"]
-REDIS_JOB_DB = int(os.environ["REDIS_JOB_DB"])
+# Retrieve environment variables for Redis configuration and API token
+REDIS_ENDPOINT = os.environ["REDIS_ENDPOINT"]  # Endpoint for Redis connection
+REDIS_JOB_DB = int(os.environ["REDIS_JOB_DB"])  # Redis database number for jobs
 
-API_TOKEN = os.environ["API_TOKEN"]
+API_TOKEN = os.environ["API_TOKEN"]  # API token for authentication
 
+# Initialize Redis client for tracking active jobs
 job_active = redis.Redis(host=REDIS_ENDPOINT, db=REDIS_JOB_DB)
 
+# Initialize MongoDB wrapper and get collections for different data models
 mongoDBWrapper = MongoDBWrapper()
 row_c = mongoDBWrapper.get_collection("row")
 candidate_scored_c = mongoDBWrapper.get_collection("candidateScored")
@@ -32,24 +37,30 @@ cta_c = mongoDBWrapper.get_collection("cta")
 dataset_c = mongoDBWrapper.get_collection("dataset")
 table_c = mongoDBWrapper.get_collection("table")
 
+# Initialize Flask application and enable CORS
 app = Flask(__name__)
 CORS(app)
+
+# Read API description from a text file
 with open("data.txt") as f:
     description = f.read()
 
+# Set up the API with version, title, and description read from the file
 api = Api(app, version="1.0", title="Alligator", description=description)
+
+# Define a namespace for dataset related operations
 ds = api.namespace("dataset", description="Dataset namespace")
 
-
+# Initialize a parser for file uploads
 upload_parser = api.parser()
 upload_parser.add_argument("file", location="files",
                            type=FileStorage, required=True)
 
-
+# Define a function to validate the provided token against the expected API token
 def validate_token(token):
     return token == API_TOKEN
 
-
+# Define data models for the API to serialize and deserialize data
 rows_fields = api.model("Rows", {
     "idRow": fields.Integer,
     "data": fields.List(fields.String)
@@ -119,6 +130,7 @@ table_list_field = api.model("TablesList",  {
 })
 
 
+# Define a new route '/createWithArray' to handle batch creation of resources
 @ds.route("/createWithArray")
 @ds.doc(
     responses={200: "OK", 404: "Not found",
@@ -131,12 +143,13 @@ class CreateWithArray(Resource):
     @ds.doc(
         body = [table_list_field],
         description="""
-                     Upload a sample of table to annotate
+                        Upload a list of tables to annotate.
                     """
     )
     def post(self):
         """
-            Upload table data using array
+            Receives an array of table data for bulk processing.
+            This endpoint is used for annotating multiple tables in a single API call.
         """
         parser = reqparse.RequestParser()
         parser.add_argument("token", type=str, help="variable 1", location="args")
@@ -149,17 +162,7 @@ class CreateWithArray(Resource):
 
         try:
             tables = request.get_json()
-            for table in tables:
-                dataset_name = table["datasetName"]
-                table_name = table["tableName"]
-                out.append({"datasetName": dataset_name, "tableName": table_name})
-            """ for table in tables:
-                dataset_name = table["datasetName"]
-                table_name = table["tableName"]
-                response = request.get(f"http://localhost:5000/dataset/{dataset_name}/table/{table_name}?page=1&token={token}")
-                response = response.json()
-                if response["status"] == "DOING":
-                    out.append({"datasetName": dataset_name, "tableName": table_name}) """
+            out = [{"datasetName": table["datasetName"], "tableName": table["tableName"]} for table in tables]
         except:
             print({"traceback": traceback.format_exc()}, flush=True)
             return {"Error": "Invalid Json"}, 400
@@ -174,7 +177,7 @@ class CreateWithArray(Resource):
             tables = table.get_data()
             mongoDBWrapper.get_collection("row").insert_many(tables)
             job_active.delete("STOP")
-            #out = [{"id": str(table["_id"]), "datasetName": table["datasetName"], "tableName": table["tableName"]} for table in tables]
+            out = [{"id": str(table["_id"]), "datasetName": table["datasetName"], "tableName": table["tableName"]} for table in tables]
         except Exception as e:
             print({"traceback": traceback.format_exc()}, flush=True)
             #return {"status": "Error", "message": str(e)}, 400
@@ -184,19 +187,44 @@ class CreateWithArray(Resource):
 
 @ds.route("")
 @ds.doc(
-    responses={200: "OK", 404: "Not found",
-               400: "Bad request", 403: "Invalid token"},
-    params={ 
-        "token": {"description": "token key api",
-                                "type": "string", "required": True}
+    responses={
+        200: "Success: The requested data was found and returned.",
+        404: "Not Found: The requested resource was not found on the server.",
+        400: "Bad Request: The request was invalid or cannot be served.",
+        403: "Forbidden: Invalid token or lack of access rights to the requested resource."
     },
-    description="""
-                """
+    params={
+        "token": {
+            "description": "An API token for authentication and authorization purposes.",
+            "type": "string",
+            "required": True
+        }
+    },
+    description="Operations related to datasets."
 )
 class Dataset(Resource):
-    @ds.doc(params={"page": {"description": "Number of page",
-                                "type": "int", "default": 1}})
+    @ds.doc(
+        params={
+            "page": {
+                "description": "The page number for paginated results. If not specified, defaults to 1.",
+                "type": "int",
+                "default": 1
+            }
+        },
+        description="Retrieve datasets with pagination. Each page contains a subset of datasets."
+    )
     def get(self):
+        """
+            Retrieves a paginated list of datasets. It uses the 'page' parameter to return the corresponding subset of datasets.
+            Requires a valid token for authentication.
+
+            Parameters:
+            - token (str): An API token provided in the query string for access authorization.
+            - page (int, optional): The page number for pagination, defaults to 1 if not specified.
+
+            Returns:
+            - A list of dataset summaries with their status and processing information, or an error message with an HTTP status code.
+        """
         parser = reqparse.RequestParser()
         parser.add_argument("token", type=str, help="variable 1", location="args")
         parser.add_argument("page", type=str, help="variable 2", location="args")
@@ -230,9 +258,27 @@ class Dataset(Resource):
             return {"status": "Error", "message": str(e)}, 400
 
     
-    @ds.doc(params={"datasetName": {"description": "Created dataset",
-                                "type": "string", "required": True}})
+    @ds.doc(
+        params={
+            "datasetName": {
+                "description": "The name of the dataset to be created.",
+                "type": "string",
+                "required": True
+            }
+        },
+        description="Create a new dataset with the specified name."
+    )
     def post(self):
+        """
+            Creates a new dataset entry with the given name. Validates the provided token and adds an entry to the database.
+
+            Parameters:
+            - token (str): An API token provided in the query string for access authorization.
+            - datasetName (str): The name of the new dataset to be created.
+
+            Returns:
+            - A confirmation message with the status of the dataset creation, or an error message with an HTTP status code.
+        """
         parser = reqparse.RequestParser()
         parser.add_argument("token", type=str, help="variable 1", location="args")
         parser.add_argument("datasetName", type=str, help="variable 2", location="args")
@@ -269,7 +315,6 @@ class Dataset(Resource):
 )
 class DatasetID(Resource):
     def get(self, datasetName):
-        #results = row_c.aggregate([{"$match":{"dataset":dataset}}, {"$group": {"_id":{"name":"$name"}}}])
         parser = reqparse.RequestParser()
         parser.add_argument("token", type=str, help="variable 1", location="args")
         parser.add_argument("page", type=int, help="variable 2", location="args")
@@ -373,7 +418,7 @@ class TableID(Resource):
         args = parser.parse_args()
         page = args["page"]
         token = args["token"]
-        #stringId = args["stringId"] == "true"
+        
        
         if not validate_token(token):
             return {"Error": "Invalid Token"}, 403
@@ -385,108 +430,112 @@ class TableID(Resource):
         """
         # will have to change in the future 
         
-        if page is None:
-            query = {"datasetName": datasetName, "tableName": tableName}
-        else:    
-            query = {"datasetName": datasetName, "tableName": tableName, "page": page}
-    
         try:
-            results = row_c.find(query)
-            out = [
-                {
-                    "datasetName": result["datasetName"],
-                    "tableName": result["tableName"],
-                    "header": result["header"],
-                    "rows": result["rows"],
-                    "semanticAnnotations": {"cea": [], "cpa": [], "cta": []},
-                    "metadata": result.get("metadata", []),
-                    "status": result["status"]
-                }
-                for result in results
-            ]
-
-            buffer = out[0]
-            for o in out[1:]:
-                buffer["rows"] += o["rows"]
-            buffer["nrows"] = len(buffer["rows"])
-
-            if len(out) > 0:
-                if page is None:
-                    out = buffer
-                else:
-                    out = out[0]
-                doing = True
-                results = cea_c.find(query)
-                total = cea_c.count_documents(query)
-                if total == len(out["rows"]):
-                    doing = False
-                for result in results:
-                    winning_candidates = result["winningCandidates"]
-                    for id_col, candidates in enumerate(winning_candidates):
-                        entities = []
-                        for candidate in candidates[0:3]:
-                            entities.append({
-                                "id": candidate["id"],
-                                "name": candidate["name"],
-                                "type": candidate["types"],
-                                "description": candidate["description"],
-                                "match": candidate["match"],
-                                "delta": candidate["delta"],
-                                "score": candidate["score"]
-                            })
-                        out["semanticAnnotations"]["cea"].append({
-                            "idColumn": id_col,
-                            "idRow": result["row"],
-                            "entity": entities
-                        })
-                out["status"] = "DONE" if doing is False else "DOING"        
-                results = cpa_c.find(query)
-                for result in results:
-                    winning_predicates = result["cpa"]
-                    for id_source_column in winning_predicates:
-                        for id_target_column in winning_predicates[id_source_column]:
-                            out["semanticAnnotations"]["cpa"].append({
-                                "idSourceColumn": id_source_column,
-                                "idTargetColumn": id_target_column,
-                                "predicate": winning_predicates[id_source_column][id_target_column]
-                            })
-                results = cta_c.find(query)
-                for result in results:
-                    winning_types = result["cta"]
-                    for id_col in winning_types:
-                        out["semanticAnnotations"]["cta"].append({
-                            "idColumn": int(id_col),
-                            "types": [winning_types[id_col]]
-                        })        
+            out = self._get_table(datasetName, tableName, page)
             return out
         except Exception as e:
             print({"traceback": traceback.format_exc()}, flush=True)
-            return {"status": "Error", "message": str(e)}, 400
+            return {"status": "Error", "message": str(e)}, 404
     
+
+    def _get_table(self, dataset_name, table_name, page=None):
+        query = {"datasetName": dataset_name, "tableName": table_name}
+        if page is not None:
+            query["page"] = page
+        results = row_c.find(query)    
+        out = [
+            {
+                "datasetName": result["datasetName"],
+                "tableName": result["tableName"],
+                "header": result["header"],
+                "rows": result["rows"],
+                "semanticAnnotations": {"cea": [], "cpa": [], "cta": []},
+                "metadata": result.get("metadata", []),
+                "status": result["status"]
+            }
+            for result in results
+        ]
+
+        buffer = out[0]
+        for o in out[1:]:
+            buffer["rows"] += o["rows"]
+        buffer["nrows"] = len(buffer["rows"])
+
+        if len(out) > 0:
+            if page is None:
+                out = buffer
+            else:
+                out = out[0]
+            doing = True
+            results = cea_c.find(query)
+            total = cea_c.count_documents(query)
+            if total == len(out["rows"]):
+                doing = False
+            for result in results:
+                winning_candidates = result["winningCandidates"]
+                for id_col, candidates in enumerate(winning_candidates):
+                    entities = []
+                    for candidate in candidates[0:3]:
+                        entities.append({
+                            "id": candidate["id"],
+                            "name": candidate["name"],
+                            "type": candidate["types"],
+                            "description": candidate["description"],
+                            "match": candidate["match"],
+                            "delta": candidate["delta"],
+                            "score": candidate["score"]
+                        })
+                    out["semanticAnnotations"]["cea"].append({
+                        "idColumn": id_col,
+                        "idRow": result["row"],
+                        "entity": entities
+                    })
+            out["status"] = "DONE" if doing is False else "DOING"        
+            results = cpa_c.find(query)
+            for result in results:
+                winning_predicates = result["cpa"]
+                for id_source_column in winning_predicates:
+                    for id_target_column in winning_predicates[id_source_column]:
+                        out["semanticAnnotations"]["cpa"].append({
+                            "idSourceColumn": id_source_column,
+                            "idTargetColumn": id_target_column,
+                            "predicate": winning_predicates[id_source_column][id_target_column]
+                        })
+            results = cta_c.find(query)
+            for result in results:
+                winning_types = result["cta"]
+                for id_col in winning_types:
+                    out["semanticAnnotations"]["cta"].append({
+                        "idColumn": int(id_col),
+                        "types": [winning_types[id_col]]
+                    })            
+        return out
         
     def delete(self, datasetName, tableName):
         parser = reqparse.RequestParser()
         parser.add_argument("token", type=str, help="variable 1", location="args")
         args = parser.parse_args()
         token = args["token"]
-        #stringId = args["stringId"] == "true"
        
         if not validate_token(token):
             return {"Error": "Invalid Token"}, 403
 
-        query = {"datasetName": datasetName, "tableName": tableName}
         try:
-            result = row_c.delete_many(query)
-            table_c.delete_one(query)
-            cea_c.delete_many(query)
-            cta_c.delete_many(query)
-            cpa_c.delete_many(query)
-            candidate_scored_c.delete_many(query)
+            self._delete_table(datasetName, tableName)
             return {"datasetName": datasetName, "tableName": tableName, "deleted": True}, 200
         except Exception as e:
             print({"traceback": traceback.format_exc()}, flush=True)
             return {"status": "Error", "message": str(e)}, 400
 
+    def _delete_table(self, dataset_name, table_name):
+        query = {"datasetName": dataset_name, "tableName": table_name}
+        row_c.delete_many(query)
+        table_c.delete_one(query)
+        cea_c.delete_many(query)
+        cta_c.delete_many(query)
+        cpa_c.delete_many(query)
+        candidate_scored_c.delete_many(query)
+       
 
 if __name__ == "__main__":
     app.run(debug=True)

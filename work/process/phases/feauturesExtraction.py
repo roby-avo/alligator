@@ -1,5 +1,11 @@
 import utils.metrics as metrics
+import json
 
+with open("./process/cache_obj.json") as f:
+    cache_obj = json.loads(f.read())
+
+with open("./process/cache_lit.json") as f:
+    cache_lit = json.loads(f.read())
 
 class FeauturesExtraction:
     def __init__(self, rows, lamAPI):
@@ -33,11 +39,20 @@ class FeauturesExtraction:
 
 
     def _compute_similarity_between_ne_cells(self, subj_cell, obj_cell):
-        subjects_objects = self._lamAPI.objects([candidate["id"] for candidate in subj_cell.candidates()])
+        subj_id_candidates = [candidate["id"] for candidate in subj_cell.candidates() if candidate["id"] not in cache_obj]
+
+        if len(subj_id_candidates) > 0:
+            subjects_objects = self._lamAPI.objects(subj_id_candidates)
         object_rel_score_buffer = {}
         for subj_candidate in subj_cell.candidates():
             id_subject = subj_candidate["id"]
-            subj_candidates_objects = subjects_objects.get(id_subject, {}).get("objects", {})
+            
+            if id_subject not in cache_obj:
+                subj_candidates_objects = subjects_objects.get(id_subject, {}).get("objects", {})
+            else:    
+                subj_candidates_objects = cache_obj.get(id_subject, {})
+            #subj_candidates_objects = subjects_objects.get(id_subject, {}).get("objects", {})
+
             objects_set = set(subj_candidates_objects.keys())
             obj_score_max = 0
             objects_itersection = objects_set.intersection(set([candidate["id"] for candidate in obj_cell.candidates()]))
@@ -85,12 +100,23 @@ class FeauturesExtraction:
                 score = metrics.compute_similarity_between_string(valueInCell, valueFromKg.lower())
             return score
 
-        subjects_literals = self._lamAPI.literals([candidate["id"] for candidate in subj_cell.candidates()])
+        subj_id_candidates = [candidate["id"] for candidate in subj_cell.candidates() if candidate["id"] not in cache_lit]
+        if len(subj_id_candidates) > 0:
+            subjects_literals = self._lamAPI.literals(subj_id_candidates)
+            if len(subjects_literals) > 0:
+                return
+
         datatype = obj_cell.datatype
         
         for subj_candidate in subj_cell.candidates():
             id_subject = subj_candidate["id"]
-            subj_literals = subjects_literals.get(id_subject, {}).get("literals", {})
+
+            if id_subject not in cache_lit:
+                subj_literals = subjects_literals.get(id_subject, {}).get("literals", {})
+            else:   
+                subj_literals = cache_lit.get(id_subject, {})
+            
+            #subj_literals = subjects_literals.get(id_subject, {}).get("literals", {})
 
             new_datatype = datatype
 

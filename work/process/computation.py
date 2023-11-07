@@ -30,7 +30,7 @@ rn_model = load_model(rn_neural_path)
 
 REDIS_ENDPOINT = os.environ["REDIS_ENDPOINT"]
 REDIS_JOB_DB = int(os.environ["REDIS_JOB_DB"])
-LAMAPI_HOST, LAMAPI_PORT = os.environ["LAMAPI_ENDPOINT"].split(":")
+LAMAPI_HOST = os.environ["LAMAPI_ENDPOINT"]
 LAMAPI_TOKEN = os.environ["LAMAPI_TOKEN"]
 
 
@@ -64,7 +64,7 @@ dataset_name = data["datasetName"]
 table_name = data["tableName"]
 page = data["page"]
 
-lamAPI = LamAPI(LAMAPI_HOST, LAMAPI_PORT, LAMAPI_TOKEN, kg=kg_reference)
+lamAPI = LamAPI(LAMAPI_HOST, LAMAPI_TOKEN, kg=kg_reference)
 
 obj_row_update = {"status": "DONE", "time": None}
 dp = DataPreparation(rows_data, lamAPI)

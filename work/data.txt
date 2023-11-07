@@ -1,5 +1,6 @@
-<img src="https://i.postimg.cc/9QRqBRxq/alligator.png" alt="My Image" heigth="200" width="200">
-<strong>A.L.L.I.G.A.T.O.R. - Automated Learning and Linking for Intelligent Graph-based Association of Tabular Objects and Relationships</strong> is a project that performs entity linking over tabular data with the support of a ML algorithm. 
-Through an API specification, the tool allows for the performance of entity linking against <a href='https://www.wikidata.org/'>Wikidata</a>.<br>
-<br>
-You can test the API using the token: <code>alligator_demo_2023</code>. (<small>The maximum number of requests per day is 1000</small>).
+<img src="https://i.postimg.cc/9QRqBRxq/alligator.png" alt="A.L.L.I.G.A.T.O.R. Logo" height="200" width="200">
+<strong>A.L.L.I.G.A.T.O.R. - Automated Learning and Linking for Intelligent Graph-based Association of Tabular Objects and Relationships</strong> constitutes an advanced platform that leverages machine learning algorithms to facilitate the process of entity linking within tabular datasets. 
+
+This robust system interfaces with <a href='https://www.wikidata.org/'>Wikidata</a> to enrich tables by associating their elements with semantically linked entities. Our API provides a streamlined, programmable access to this capability, enabling users to integrate sophisticated entity resolution features into their applications.
+
+To explore the API's functionalities, utilize the token: <code>alligator_demo_2023</code> during your requests.
