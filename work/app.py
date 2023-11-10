@@ -112,7 +112,7 @@ table_list_field = api.model("TablesList",  {
     "datasetName": fields.String(required=True, example="Dataset1"),
     "tableName": fields.String(required=True, example="Test1"),
     "header": fields.List(fields.String(), required=True, example=["col1", "col2", "col3", "Date of Birth"]),
-    "rows": fields.List(fields.String(), required=True, example= [
+    "rows": fields.List(fields.String(), required=True, example=[
         { "idRow": 1, "data": ["Zooey Deschanel", "Los Angeles", "United States", "January 17, 1980"]},
         { "idRow": 2, "data": ["Sarah Mclachlan", "Halifax", "Canada", "January 28, 1968"]},
         { "idRow": 3, "data": ["Macaulay Carson Culkin", "New York", "United States", "August 26, 1980"]},
