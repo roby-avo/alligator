@@ -108,26 +108,44 @@ table_fields = api.model("Table", {
     "candidateSize": fields.Integer
 }) 
 
-
 table_list_field = api.model("TablesList",  {
     "datasetName": fields.String(required=True, example="Dataset1"),
     "tableName": fields.String(required=True, example="Test1"),
-    "header": fields.List(fields.String(), required=True, example=["col1", "col2", "col3"]),
+    "header": fields.List(fields.String(), required=True, example=["col1", "col2", "col3", "Date of Birth"]),
     "rows": fields.List(fields.String(), required=True, example= [
-        { "idRow": 1, "data": ["Zooey Deschanel", "Los Angeles", "United States"]},
-        { "idRow": 2, "data": ["Sarah Mclachlan", "Halifax", "Canada"]},
-        { "idRow": 3, "data": ["Macaulay Carson Culkin", "New York", "United States"]}
+        { "idRow": 1, "data": ["Zooey Deschanel", "Los Angeles", "United States", "January 17, 1980"]},
+        { "idRow": 2, "data": ["Sarah Mclachlan", "Halifax", "Canada", "January 28, 1968"]},
+        { "idRow": 3, "data": ["Macaulay Carson Culkin", "New York", "United States", "August 26, 1980"]},
+        { "idRow": 4, "data": ["Leonardo DiCaprio", "Los Angeles", "United States", "November 11, 1974"]},
+        { "idRow": 5, "data": ["Tom Hanks", "Concord", "United States", "July 9, 1956"]},
+        { "idRow": 6, "data": ["Meryl Streep", "Summit", "United States", "June 22, 1949"]},
+        { "idRow": 7, "data": ["Brad Pitt", "Shawnee", "United States", "December 18, 1963"]},
+        { "idRow": 8, "data": ["Natalie Portman", "Jerusalem", "Israel", "June 9, 1981"]},
+        { "idRow": 9, "data": ["Robert De Niro", "New York", "United States", "August 17, 1943"]},
+        { "idRow": 10, "data": ["Angelina Jolie", "Los Angeles", "United States", "June 4, 1975"]},
+        { "idRow": 11, "data": ["Steven Spielberg", "Los Angeles", "United States", "December 18, 1946"]},
+        { "idRow": 12, "data": ["Martin Scorsese", "New York", "United States", "November 17, 1942"]},
+        { "idRow": 13, "data": ["Quentin Tarantino", "Knoxville", "United States", "March 27, 1963"]},
+        { "idRow": 14, "data": ["Alfred Hitchcock", "London", "United Kingdom", "August 13, 1899"]},
+        { "idRow": 15, "data": ["Stanley Kubrick", "New York", "United States", "July 26, 1928"]},
+        { "idRow": 16, "data": ["Christopher Nolan", "London", "United Kingdom", "July 30, 1970"]},
+        { "idRow": 17, "data": ["Francis Ford Coppola", "Detroit", "United States", "April 7, 1939"]},
+        { "idRow": 18, "data": ["James Cameron", "Kapuskasing", "Canada", "August 16, 1954"]},
+        { "idRow": 19, "data": ["Ridley Scott", "South Shields", "United Kingdom", "November 30, 1937"]},
+        { "idRow": 20, "data": ["Woody Allen", "New York", "United States", "December 1, 1935"]}
     ]),
     "semanticAnnotations": fields.Nested(semantic_annotation_fields, example={ "cea": [], "cta": [], "cpa": []}),
     "metadata": fields.Nested(metadata, example={
         "column": [
             {"idColumn": 0, "tag": "NE"},
             {"idColumn": 1, "tag": "NE"},
-            {"idColumn": 2, "tag": "NE"}
+            {"idColumn": 2, "tag": "NE"},
+            {"idColumn": 3, "tag": "LIT", "datatype": "DATETIME"}
         ]
     }),
     "kgReference": fields.String(required=True, example="wikidata")
 })
+
 
 
 # Define a new route '/createWithArray' to handle batch creation of resources
@@ -285,8 +303,10 @@ class Dataset(Resource):
         args = parser.parse_args()
         token = args["token"]
         dataset_name = args["datasetName"]
+
         if not validate_token(token):
             return {"Error": "Invalid Token"}, 403
+        
         data = {
             "datasetName": dataset_name,
             "Ntables": 0,
@@ -305,16 +325,31 @@ class Dataset(Resource):
    
 @ds.route("/<datasetName>")
 @ds.doc(
-    responses={200: "OK", 404: "Not found",
-               400: "Bad request", 403: "Invalid token"},
+    description="Retrieve data for a specific dataset. Allows pagination through the 'page' parameter.",
+    responses={
+        200: "OK - Returns a list of data related to the requested dataset.",
+        404: "Not Found - The specified dataset could not be found.",
+        400: "Bad Request - The request was invalid. This can be caused by missing or invalid parameters.",
+        403: "Forbidden - Access denied due to invalid token."
+    },
     params={ 
-        "datasetName": "The name of dataset",
-        "page": "page number",
-        "token": "token api key"
+        "datasetName": {"description": "The name of the dataset to retrieve.", "type": "string"},
+        "page": {"description": "Page number for pagination. Each page returns a subset of the dataset.", "type": "integer"},
+        "token": {"description": "API key token for authentication.", "type": "string"}
     }
 )
 class DatasetID(Resource):
     def get(self, datasetName):
+        """
+            Retrieves dataset information based on the dataset name and page number.
+            Parameters:
+                datasetName (str): The name of the dataset to be retrieved.
+                page (int): Optional. The page number for pagination of results.
+                token (str): API token for authentication.
+            Returns:
+                List[Dict]: A list of dictionaries containing dataset information.
+                If an error occurs, returns a status message with the error detail.
+        """
         parser = reqparse.RequestParser()
         parser.add_argument("token", type=str, help="variable 1", location="args")
         parser.add_argument("page", type=int, help="variable 2", location="args")
@@ -322,6 +357,10 @@ class DatasetID(Resource):
         token = args["token"]
         dataset_name = datasetName
         page = args["page"]
+
+        if not validate_token(token):
+            return {"Error": "Invalid Token"}, 403
+
         if page is None or len(page) == 0:
             page = 1
         
@@ -341,6 +380,15 @@ class DatasetID(Resource):
 
 
     def delete(self, datasetName):
+        """
+            Deletes a specific dataset based on the dataset name.
+            Parameters:
+                datasetName (str): The name of the dataset to be deleted.
+                token (str): API token for authentication.
+            Returns:
+                Dict: A status message indicating the result of the delete operation.
+                If an error occurs, returns a status message with the error detail.
+        """
         parser = reqparse.RequestParser()
         parser.add_argument("token", type=str, help="variable 1", location="args")
         parser.add_argument("datasetName", type=str, help="variable 2", location="args")
@@ -361,15 +409,29 @@ class DatasetID(Resource):
 @ds.route("/<datasetName>/table")
 @ds.expect(upload_parser)
 @ds.doc(
-    responses={200: "OK", 404: "Not found",
-               400: "Bad request", 403: "Invalid token"},
+    description="Endpoint for uploading and processing a table within a specified dataset.",
+    responses={
+        200: "OK - The table was successfully processed and stored.",
+        404: "Not Found - The specified dataset could not be found.",
+        400: "Bad Request - There was an error in the request. This might be due to invalid parameters or file format.",
+        403: "Forbidden - Access denied due to invalid token."
+    },
     params={ 
-        "kgReference": "source KG of reference for the annotation process",
-        "token": "token api key"
+        "kgReference": {"description": "Source Knowledge Graph (KG) of reference for the annotation process. Default is 'wikidata'.", "type": "string"},
+        "token": {"description": "API key token for authentication.", "type": "string"}
     }
 )
 class Upload(Resource):
     def post(self, datasetName):
+        """
+            Handles the uploading and processing of a table for a specified dataset.
+            Parameters:
+                datasetName (str): The name of the dataset to which the table will be added.
+                kgReference (str): Optional. The reference Knowledge Graph for annotation (e.g., 'wikidata').
+                token (str): API token for authentication.
+            Returns:
+                Dict: A status message and a list of processed tables, or an error message in case of failure.
+        """
         parser = reqparse.RequestParser()
         parser.add_argument("kgReference", type=str, help="variable 1", location="args")
         parser.add_argument("token", type=str, help="variable 2", location="args")
@@ -403,15 +465,30 @@ class Upload(Resource):
 
 @ds.route("/<datasetName>/table/<tableName>")
 @ds.doc(
-    responses={200: "OK", 404: "Not found",
-               400: "Bad request", 403: "Invalid token"},
+    description="Endpoint for retrieving and deleting specific tables within a dataset.",
+    responses={
+        200: "OK - Successfully retrieved or deleted the specified table.",
+        404: "Not Found - The specified table or dataset could not be found.",
+        400: "Bad Request - The request was invalid, possibly due to incorrect parameters.",
+        403: "Forbidden - Access denied due to invalid token."
+    },
     params={ 
-        "page": " The page number of the results. It starts from 1. If not specified, it will return all pages",
-        "token": " Your API key token for authentication"
+        "page": {"description": "The page number for pagination of table data. Defaults to returning all pages if not specified.", "type": "integer"},
+        "token": {"description": "API key token for authentication.", "type": "string"}
     }
 )
 class TableID(Resource):
     def get(self, datasetName, tableName):
+        """
+            Retrieves a specific table from a dataset based on the dataset and table names.
+            Parameters:
+                datasetName (str): The name of the dataset.
+                tableName (str): The name of the table to retrieve.
+                page (int): Optional. The page number for pagination of table data.
+                token (str): API token for authentication.
+            Returns:
+                Dict: A dictionary containing the requested table data, or an error message in case of failure.
+        """
         parser = reqparse.RequestParser()
         parser.add_argument("page", type=int, help="variable 1", location="args")
         parser.add_argument("token", type=str, help="variable 1", location="args")
@@ -510,8 +587,18 @@ class TableID(Resource):
                         "types": [winning_types[id_col]]
                     })            
         return out
-        
+    
+    
     def delete(self, datasetName, tableName):
+        """
+            Deletes a specific table from a dataset based on the dataset and table names.
+            Parameters:
+                datasetName (str): The name of the dataset.
+                tableName (str): The name of the table to be deleted.
+                token (str): API token for authentication.
+            Returns:
+                Dict: A status message indicating the result of the delete operation.
+        """
         parser = reqparse.RequestParser()
         parser.add_argument("token", type=str, help="variable 1", location="args")
         args = parser.parse_args()
