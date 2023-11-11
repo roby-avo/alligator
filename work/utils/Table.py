@@ -86,8 +86,7 @@ class TableModel:
             "page": 1
         }
 
-        self.fill_table_metadata(table_obj)
-
+        self.fill_table_metadata(table_obj)    
         # Split DataFrame rows into chunks of CHUNK_SIZE and create new table entries for each chunk
         num_rows = len(df)
         if num_rows >= self.SPLIT_THRESHOLD:
@@ -108,6 +107,8 @@ class TableModel:
         else:
             table_obj['rows'] = [{"idRow": idx + 1, "data": row_data} for idx, row_data in enumerate(df.values.tolist())]
             self.data.append(table_obj)
+        
+        return num_rows
 
     def fill_table_metadata(self, entry):
         dataset_name = entry['datasetName']
@@ -137,11 +138,13 @@ class TableModel:
     def get_data(self):
         return self.data
 
-    def store_tables(self):
+    def store_tables(self, Nrows=None):
         for dataset_name in self.table_metadata:
             for table_name in self.table_metadata[dataset_name]:
                 metadata = self.table_metadata[dataset_name][table_name]
                 total_tables = self._db.get_collection("table").count_documents({"datasetName": dataset_name})
                 page = math.floor(total_tables / self.TABLE_FOR_PAGE) + 1
                 metadata["page"] = page
+                if Nrows is not None:
+                    metadata["Nrows"] = Nrows
                 self._db.get_collection("table").insert_one(metadata)

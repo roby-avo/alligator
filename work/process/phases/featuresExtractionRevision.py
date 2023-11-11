@@ -71,7 +71,7 @@ class FeaturesExtractionRevision:
                     types = candidate["types"]
                     for t in types:
                         id_type = t["id"]
-                        if id_type in history:
+                        if id_type in history or id_type == "":
                             continue
                         if id_type not in self._cta[id_col]:
                             self._cta[id_col][id_type] = 0

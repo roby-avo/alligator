@@ -14,6 +14,7 @@ from indexing import index  # Module for indexing functionality
 from process.wrapper.Database import MongoDBWrapper  # MongoDB database wrapper
 from utils.Dataset import DatasetModel  # Dataset utility model
 from utils.Table import TableModel  # Table utility model
+import pymongo  # MongoDB database interface
 
 # Create an index using the `index` module
 index.create_index()
@@ -315,10 +316,11 @@ class Dataset(Resource):
             "process": None
         }    
         try:
-            dataset_c.insert_one(data)
             result = {"message": f"Created dataset {dataset_name}"}, 200
-        except:
+            dataset_c.insert_one(data)
+        except Exception as e:
             result = {"message": f"Dataset {dataset_name} already exist"}, 400
+
         return result
 
 
@@ -407,7 +409,6 @@ class DatasetID(Resource):
 
 
 @ds.route("/<datasetName>/table")
-@ds.expect(upload_parser)
 @ds.doc(
     description="Endpoint for uploading and processing a table within a specified dataset.",
     responses={
@@ -417,11 +418,16 @@ class DatasetID(Resource):
         403: "Forbidden - Access denied due to invalid token."
     },
     params={ 
-        "kgReference": {"description": "Source Knowledge Graph (KG) of reference for the annotation process. Default is 'wikidata'.", "type": "string"},
         "token": {"description": "API key token for authentication.", "type": "string"}
     }
 )
-class Upload(Resource):
+class DatasetTable(Resource):
+    @ds.expect(upload_parser)
+    @ds.doc(
+        params={ 
+            "kgReference": {"description": "Source Knowledge Graph (KG) of reference for the annotation process. Default is 'wikidata'.", "type": "string"}
+        }
+    )
     def post(self, datasetName):
         """
             Handles the uploading and processing of a table for a specified dataset.
@@ -443,24 +449,60 @@ class Upload(Resource):
         if not validate_token(token):
             return {"Error": "Invalid Token"}, 403
         
+
         try:
             args = upload_parser.parse_args()
             uploaded_file = args["file"]  # This is FileStorage instance
             dataset_name = datasetName
             table_name = uploaded_file.filename.split(".")[0]
+            out = [{"datasetName": datasetName, "tableName": table_name}]
             table = TableModel(mongoDBWrapper)
-            table.parse_csv(uploaded_file, dataset_name, table_name, kg_reference)
-            table.store_tables()
+            num_rows = table.parse_csv(uploaded_file, dataset_name, table_name, kg_reference)
+            table.store_tables(num_rows)
             dataset = DatasetModel(mongoDBWrapper, table.table_metadata)
             dataset.store_datasets()
             tables = table.get_data()
             mongoDBWrapper.get_collection("row").insert_many(tables)    
             job_active.delete("STOP")
             out = [{"id": str(table["_id"]),  "datasetName": table["datasetName"], "tableName": table["tableName"]} for table in tables]
+        except pymongo.errors.DuplicateKeyError as e:
+            pass
+            #print({"traceback": traceback.format_exc()}, flush=True)       
         except Exception as e:
             return {"status": "Error", "message": str(e), "traceback": traceback.format_exc()}, 400
         
         return {"status": "Ok", "tables": out}, 200
+    
+    def get(self, datasetName, page=None):
+        parser = reqparse.RequestParser()
+        parser.add_argument("page", type=int, help="variable 1", location="args")
+        parser.add_argument("token", type=str, help="variable 1", location="args")
+        args = parser.parse_args()
+        page = args["page"]
+        token = args["token"]
+
+        if not validate_token(token):
+            return {"Error": "Invalid Token"}, 403
+        
+        query = {"datasetName": datasetName}
+        if page is not None:
+            query["page"] = page
+        
+        try:
+            results = mongoDBWrapper.get_collection("table").find({"datasetName": datasetName})
+            out = []
+            for result in results:
+                out.append({
+                    "datasetName": result["datasetName"],
+                    "tableName": result["tableName"],
+                    "nrows": result["Nrows"],
+                    "status": result["state"]
+                })
+        except Exception as e:
+            out = {"status": "Error", "message": str(e)}, 400        
+
+        return out, 200
+    
 
 
 @ds.route("/<datasetName>/table/<tableName>")
@@ -568,8 +610,8 @@ class TableID(Resource):
                         "entity": entities
                     })
             out["status"] = "DONE" if doing is False else "DOING"        
-            results = cpa_c.find(query)
-            for result in results:
+            result = cpa_c.find_one(query)
+            if result is not None:
                 winning_predicates = result["cpa"]
                 for id_source_column in winning_predicates:
                     for id_target_column in winning_predicates[id_source_column]:
@@ -578,8 +620,9 @@ class TableID(Resource):
                             "idTargetColumn": id_target_column,
                             "predicate": winning_predicates[id_source_column][id_target_column]
                         })
-            results = cta_c.find(query)
-            for result in results:
+
+            result = cta_c.find_one(query)
+            if result is not None:
                 winning_types = result["cta"]
                 for id_col in winning_types:
                     out["semanticAnnotations"]["cta"].append({
