@@ -474,6 +474,15 @@ class DatasetTable(Resource):
         return {"status": "Ok", "tables": out}, 200
     
     def get(self, datasetName, page=None):
+        """
+            Handles the retrieval of information about tables within a specified dataset.
+            Parameters:
+                datasetName (str): The name of the dataset for which table information is requested.
+                page (int): Page number for paginated results (default is 1).
+                token (str): API token for authentication.
+            Returns:
+                List: A list of tables with their information, or an error message in case of failure.
+        """
         parser = reqparse.RequestParser()
         parser.add_argument("page", type=int, help="variable 1", location="args")
         parser.add_argument("token", type=str, help="variable 1", location="args")
@@ -484,12 +493,12 @@ class DatasetTable(Resource):
         if not validate_token(token):
             return {"Error": "Invalid Token"}, 403
         
-        query = {"datasetName": datasetName}
-        if page is not None:
-            query["page"] = page
-        
+        if page is None:
+            page = 1
+
         try:
-            results = mongoDBWrapper.get_collection("table").find({"datasetName": datasetName})
+            query = {"datasetName": datasetName, "page": int(page)}
+            results = mongoDBWrapper.get_collection("table").find(query)
             out = []
             for result in results:
                 out.append({
