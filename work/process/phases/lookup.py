@@ -35,6 +35,7 @@ class Lookup:
                     candidates = cache.get(cell, [])
                 else:
                     candidates = self._get_candidates(cell, description, id_row, types)
+                    cache[cell] = candidates
                 
                 is_subject = i == self._target["SUBJ"]
                 row.add_ne_cell(cell, row_text, candidates, i, is_subject)

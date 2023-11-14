@@ -51,6 +51,7 @@ class FeauturesExtraction:
                 subj_candidates_objects = subjects_objects.get(id_subject, {}).get("objects", {})
             else:    
                 subj_candidates_objects = cache_obj.get(id_subject, {})
+                cache_obj[id_subject] = subj_candidates_objects
             #subj_candidates_objects = subjects_objects.get(id_subject, {}).get("objects", {})
 
             objects_set = set(subj_candidates_objects.keys())
@@ -115,6 +116,7 @@ class FeauturesExtraction:
                 subj_literals = subjects_literals.get(id_subject, {}).get("literals", {})
             else:   
                 subj_literals = cache_lit.get(id_subject, {})
+                cache_lit[id_subject] = subj_literals
             
             #subj_literals = subjects_literals.get(id_subject, {}).get("literals", {})
 
