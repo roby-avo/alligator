@@ -8,8 +8,19 @@ from flask_cors import CORS  # To handle Cross-Origin Resource Sharing (CORS)
 from flask_restx import Api, Resource, fields, reqparse  # Extensions for Flask to ease REST API development
 from werkzeug.datastructures import FileStorage  # To handle file storage in Flask
 
-# Local utility modules for API functionality
-import utils.api_utils as utils
+
+import tensorflow as tf
+import logging
+
+# Disable TensorFlow warnings
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # This hides info and warning messages
+
+# Or, to suppress all TensorFlow messages (including errors)
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+
+# Additionally, to suppress Python warnings
+logging.getLogger('tensorflow').setLevel(logging.ERROR)
+
 from indexing import index  # Module for indexing functionality
 from process.wrapper.Database import MongoDBWrapper  # MongoDB database wrapper
 from utils.Dataset import DatasetModel  # Dataset utility model

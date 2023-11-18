@@ -13,7 +13,7 @@ services:
       - "${MY_JUPYTER_PORT}:8888"
     restart: always
     volumes:
-      - ./work:/home/jovyan/work
+      - ./api:/home/jovyan/work
   
   api:
     build:
@@ -30,7 +30,7 @@ services:
       - "${API_PORT}:5000"
     restart: always
     volumes:
-      - ./work:/code
+      - ./api:/code
       
   mongo:
     image: "mongo:${MONGO_VERSION}"
@@ -43,8 +43,7 @@ services:
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
     volumes:
       - ./mongo-data:/data/db
-      - ~/my-data:/data/my-data
-
+      
   redis:
     image: redis:alpine
     container_name: alligator_redis

@@ -17,11 +17,15 @@ def create_index():
         c.create_index([('tableName', 1)])
         
     c = get_collection('row')
+    c.create_index([('state', 1)])
     c.create_index([('datasetName', 1)])
     c.create_index([('datasetName', 1), ('tableName', 1)])
 
     c = get_collection('dataset')
     c.create_index([('datasetName', 1)], unique=True)
+    
     c = get_collection('table')
+    c.create_index([('datasetName', 1)])
     c.create_index([('tableName', 1)])
     c.create_index([('datasetName', 1), ('tableName', 1)], unique=True)
+    c.create_index([('idJob', 1)])

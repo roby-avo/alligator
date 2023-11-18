@@ -1,8 +1,10 @@
 import math
+import os
 
 class DatasetModel:
 
-    DATASET_FOR_PAGE = 5
+    config_values = os.environ["CONFIG_VALUES"].split(",")  # CONFIG_VALUES
+    DATASET_FOR_PAGE = int(config_values[0])
     
     def __init__(self, db, table_metadata):
         self._db = db
@@ -22,11 +24,6 @@ class DatasetModel:
                     "Ntables": n_tables,
                     "status": {
                         "TODO":n_tables, 
-                        "DOING": 0, 
-                        "DONE": 0
-                    },
-                    "statusCopy": {
-                        "TODO": 0, 
                         "DOING": 0, 
                         "DONE": 0
                     },

@@ -1,12 +1,14 @@
 import pandas as pd
 import math
+import time
+import os
 
 class TableModel:
     
-    MIN_ROWS = 25
-    SPLIT_THRESHOLD = 50
-    CHUNK_SIZE = 25
-    TABLE_FOR_PAGE = 10
+    config_values = os.environ["CONFIG_VALUES"].split(",")  # CONFIG_VALUES
+    DATASET_FOR_PAGE = int(config_values[0])
+    TABLE_FOR_PAGE = int(config_values[1])
+    CHUNCK_SIZE = int(config_values[2])
 
     def __init__(self, db):
         self._db = db
@@ -45,12 +47,12 @@ class TableModel:
             if "candidateSize" not in entry:
                 entry['candidateSize'] = 100
 
-            # Split rows into chunks of CHUNK_SIZE and create new table entries for each chunk
-            if len(rows) >= self.SPLIT_THRESHOLD:
-                chunks = [rows[i: i + self.CHUNK_SIZE] for i in range(0, len(rows), self.CHUNK_SIZE)]
+            # Split rows into chunks of CHUNCK_SIZE and create new table entries for each chunk
+            if len(rows) >= self.CHUNCK_SIZE * 2:
+                chunks = [rows[i: i + self.CHUNCK_SIZE] for i in range(0, len(rows), self.CHUNCK_SIZE)]
                 
                 # If the last chunk is smaller than MIN_ROWS, combine it with the previous chunk
-                if len(chunks[-1]) < self.MIN_ROWS:
+                if len(chunks[-1]) < self.CHUNCK_SIZE:
                     chunks[-2].extend(chunks[-1])
                     chunks.pop()
                 
@@ -120,26 +122,44 @@ class TableModel:
                 "datasetName": dataset_name,
                 "tableName": table_name,
                 "Nrows": 0, 
-                "status": {
+                "taskStatus": {
                     "TODO": 0, 
                     "DOING": 0, 
                     "DONE": 0
                 },
-                "statusCopy": {
-                    "TODO": 0, 
-                    "DOING": 0, 
-                    "DONE": 0
-                },
-                "state": "TODO"
+                "status": "TODO"
             }  
-        self.table_metadata[dataset_name][table_name]["status"]["TODO"] += 1 
+        self.table_metadata[dataset_name][table_name]["taskStatus"]["TODO"] += 1 
         self.table_metadata[dataset_name][table_name]["Nrows"] += len(entry["rows"])
 
     def get_data(self):
         return self.data
+    
+    def update_data_with_id_job(self,  dataset_name, id_job):
+        for table in self.data:
+            if table['datasetName'] == dataset_name:
+                table['idJob'] = id_job
 
     def store_tables(self, Nrows=None):
         for dataset_name in self.table_metadata:
+            result = self._db.get_collection("job").insert_one({
+                "name": dataset_name,
+                "status": {
+                    "TODO": len(self.table_metadata[dataset_name]), 
+                    "DOING": 0, 
+                    "DONE": 0
+                },
+                "startTime": time.time(),
+                "startTimeComputation": None,
+                "elapsedTime": 0,
+                "elapsedTimeComputation": 0,
+                "%": 0,
+                "estimatedTime": None,
+                "active": True
+            })
+            inserted_id = result.inserted_id
+            self.update_data_with_id_job(dataset_name, inserted_id)
+
             for table_name in self.table_metadata[dataset_name]:
                 metadata = self.table_metadata[dataset_name][table_name]
                 total_tables = self._db.get_collection("table").count_documents({"datasetName": dataset_name})
@@ -147,4 +167,10 @@ class TableModel:
                 metadata["page"] = page
                 if Nrows is not None:
                     metadata["Nrows"] = Nrows
-                self._db.get_collection("table").insert_one(metadata)
+                metadata["idJob"] = inserted_id    
+                try:
+                    self._db.get_collection("table").insert_one(metadata)
+                except:
+                    self._db.get_collection("job").delete_one({"_id": inserted_id})
+                    raise
+            
