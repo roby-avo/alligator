@@ -163,8 +163,11 @@ table_list_field = api.model("TablesList",  {
 # Define a new route '/createWithArray' to handle batch creation of resources
 @ds.route("/createWithArray")
 @ds.doc(
-    responses={200: "OK", 404: "Not found",
-               400: "Bad request", 403: "Invalid token"},
+    responses={
+        202: "Accepted - The request has been accepted for processing.",
+        400: "Bad Request - There was an error in the request. This might be due to invalid parameters or file format.",
+        403: "Forbidden - Access denied due to invalid token."
+    },
     params={ 
         "token": "token api key"
     }
@@ -212,7 +215,7 @@ class CreateWithArray(Resource):
             print({"traceback": traceback.format_exc()}, flush=True)
             #return {"status": "Error", "message": str(e)}, 400
 
-        return {"status": "Ok", "tables": out}, 200
+        return {"status": "Ok", "tables": out}, 202
    
 
 @ds.route("")
@@ -423,7 +426,8 @@ class DatasetID(Resource):
 @ds.doc(
     description="Endpoint for uploading and processing a table within a specified dataset.",
     responses={
-        200: "OK - The table was successfully processed and stored.",
+        200: "Success: The requested data was found and returned.",
+        202: "Accepted - The request has been accepted for processing.",
         404: "Not Found - The specified dataset could not be found.",
         400: "Bad Request - There was an error in the request. This might be due to invalid parameters or file format.",
         403: "Forbidden - Access denied due to invalid token."
@@ -482,7 +486,7 @@ class DatasetTable(Resource):
         except Exception as e:
             return {"status": "Error", "message": str(e), "traceback": traceback.format_exc()}, 400
         
-        return {"status": "Ok", "tables": out}, 200
+        return {"status": "Ok", "tables": out}, 202
     
     def get(self, datasetName, page=None):
         """
@@ -621,8 +625,14 @@ class TableID(Resource):
                             "type": candidate["types"],
                             "description": candidate["description"],
                             "match": candidate["match"],
-                            "delta": candidate.get("delta"),
-                            "score": candidate.get("rho'")
+                            "score": candidate.get("rho'"),
+                            "features": [
+                                {"id":"delta", "value": candidate.get("delta")},
+                                {"id":"omega", "value": candidate.get("score")},
+                                {"id":"levenshtein_distance", "value": candidate["features"].get("ed")},
+                                {"id":"jaccard_distance", "value": candidate["features"].get("jaccard")},
+                                {"id":"popularity", "value": candidate["features"].get("popularity")}
+                            ]
                         })
                     out["semanticAnnotations"]["cea"].append({
                         "idColumn": id_col,
