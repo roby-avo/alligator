@@ -160,3 +160,4 @@ cython_debug/
 #.idea/
 redis-data
 mongo-data/
+.DS_Store

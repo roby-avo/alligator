@@ -1,3 +1,4 @@
+
 class FeaturesExtractionRevision:
     def __init__(self, rows):
         self._rows = rows
@@ -13,18 +14,11 @@ class FeaturesExtractionRevision:
             for cell in row.get_cells():
                 id_col = str(cell._id_col)
                 for candidate in cell.candidates():
-                    (cta, ctaMax) = (0, 0)
-                    cta_entity_freq = []
-                    total_types = 0
+                    candidate_types_freq = {}
                     for t in candidate["types"]:
                         if t["id"] in self._cta[id_col]:
-                            cta += self._cta[id_col][t["id"]]
-                            cta_entity_freq.append(self._cta[id_col][t["id"]])
-                            total_types += 1
-                            if self._cta[id_col][t["id"]] > ctaMax:
-                                ctaMax = self._cta[id_col][t["id"]]
-                    
-                    (cpa, cpaMax) = (0, 0)
+                            candidate_types_freq[t["id"]] = self._cta[id_col][t["id"]]
+                            
                     predicates = {}
                     for id_col_pred in candidate["predicates"]:
                         for id_predicate in candidate["predicates"][id_col_pred]:
@@ -32,30 +26,30 @@ class FeaturesExtractionRevision:
                                 predicates[id_predicate] = 0
                             if candidate["predicates"][id_col_pred][id_predicate] > predicates[id_predicate]:
                                 predicates[id_predicate] = candidate["predicates"][id_col_pred][id_predicate]
-                                
+
+                    candidate_predicates_freq = {}  
                     for id_predicate in predicates:
                         if id_predicate in self._cpa[id_col]:
-                            cpa += self._cpa[id_col][id_predicate] * predicates[id_predicate]
-                            if self._cpa[id_col][id_predicate] * predicates[id_predicate] > cpaMax:
-                                cpaMax = self._cpa[id_col][id_predicate] * predicates[id_predicate]
+                            candidate_predicates_freq[id_predicate] = self._cpa[id_col][id_predicate] * predicates[id_predicate]
+                                
                     
-                    cta = 0
-                    cta_entity_freq.sort(reverse=True)
+                    candidate_types_freq = sorted(candidate_types_freq.items(), key=lambda x: x[1], reverse=True)
+                    candidate_predicates_freq = sorted(candidate_predicates_freq.items(), key=lambda x: x[1], reverse=True)
+
                     for i in range(0, 5):
-                        if i >= len(cta_entity_freq):
-                            cta += 0 
-                        else:
-                            cta += cta_entity_freq[i]    
-                    cta /= 5
-                    #cta /= len(candidate["types"]) if total_types > 0 else 1
-                    candidate["features"]["cta"] = round(cta, 2)
-                    candidate["features"]["ctaMax"] = round(ctaMax, 2)
+                        freq = 0
+                        if i < len(candidate_types_freq):
+                            freq = candidate_types_freq[i][1]  
+                        candidate["features"][f"cta_t{i+1}"] = round(freq, 3)
+
+                    for i in range(0, 5):
+                        freq = 0
+                        if i < len(candidate_predicates_freq):
+                            freq = candidate_predicates_freq[i][1]  
+                        candidate["features"][f"cpa_t{i+1}"] = round(freq, 3)
+
                     
-                    cpa /= len(predicates) if len(predicates) > 0 else 1
-                    candidate["features"]["cpa"] = round(cpa, 2)
-                    candidate["features"]["cpaMax"] = round(cpaMax, 2)
-                    
-                    candidate["features"]["diff"] = round(cell.candidates()[0]["features"]["rho"] - candidate["features"]["rho"], 3)
+                    #candidate["features"]["diff"] = round(cell.candidates()[0]["features"]["cea"] - candidate["features"]["cea"], 3)
                     
                     features[int(id_col)].append(list(candidate["features"].values()))
 
@@ -71,7 +65,7 @@ class FeaturesExtractionRevision:
                     types = candidate["types"]
                     for t in types:
                         id_type = t["id"]
-                        if id_type in history or id_type == "":
+                        if id_type in history:
                             continue
                         if id_type not in self._cta[id_col]:
                             self._cta[id_col][id_type] = 0
@@ -96,9 +90,9 @@ class FeaturesExtractionRevision:
         n_rows = len(self._rows)
         for id_col in self._cta:
             for id_type in self._cta[id_col]:
-                self._cta[id_col][id_type] = round(self._cta[id_col][id_type]/n_rows, 2)
+                self._cta[id_col][id_type] = round(self._cta[id_col][id_type]/n_rows, 3)
             for id_predicate in self._cpa[id_col]:
-                self._cpa[id_col][id_predicate] = round(self._cpa[id_col][id_predicate]/n_rows, 2)   
+                self._cpa[id_col][id_predicate] = round(self._cpa[id_col][id_predicate]/n_rows, 3)   
             for id_col_rel in self._cpa_pair[id_col]:
                 for id_predicate in self._cpa_pair[id_col][id_col_rel]:
-                    self._cpa_pair[id_col][id_col_rel][id_predicate] = round(self._cpa_pair[id_col][id_col_rel][id_predicate]/n_rows, 2)
+                    self._cpa_pair[id_col][id_col_rel][id_predicate] = round(self._cpa_pair[id_col][id_col_rel][id_predicate]/n_rows, 3)

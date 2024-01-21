@@ -1,9 +1,6 @@
 import traceback
 from model.row import Row
-import json
 
-with open("./process/cache_candidates.json") as f:
-    cache = json.loads(f.read())
  
 class Lookup:
     def __init__(self, data:object, lamAPI, target, log_c, kg_ref="wikidata", limit=100):
@@ -17,6 +14,7 @@ class Lookup:
         self._kg_ref = kg_ref
         self._limit = limit
         self._rows = []
+        self._cache = {}
         for row in data["rows"]:
             row = self._build_row(row["data"], row["idRow"])
             self._rows.append(row)
@@ -29,13 +27,13 @@ class Lookup:
         for i, cell in enumerate(cells):
             if i in self._target["NE"]:
                 types = self._types.get(str(i))
-                description = " ".join(list(set(cells_as_strings) - set([cell])))
+                description = " ".join(list(set(cells_as_strings) - set([cell]))) # unused
 
-                if cell in cache:
-                    candidates = cache.get(cell, [])
+                if cell in self._cache:
+                    candidates = self._cache.get(cell, [])
                 else:
-                    candidates = self._get_candidates(cell, description, id_row, types)
-                    cache[cell] = candidates
+                    candidates = self._get_candidates(cell, id_row, types)
+                    self._cache[cell] = candidates
                 
                 is_subject = i == self._target["SUBJ"]
                 row.add_ne_cell(cell, row_text, candidates, i, is_subject)
@@ -46,12 +44,12 @@ class Lookup:
         return row
 
     
-    def _get_candidates(self, cell, row_text, id_row, types):
+    def _get_candidates(self, cell, id_row, types):
         candidates = []
         result = None
         try:
             if len(str(cell)) > 0 and str(cell).lower() != "nan":
-                result = self._lamAPI.lookup(cell, description=row_text, limit=100)
+                result = self._lamAPI.lookup(cell, limit=100)
                 if cell not in result:
                     raise Exception("Error from lamAPI")
                 candidates = result[cell]    

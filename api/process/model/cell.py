@@ -11,7 +11,7 @@ class Cell:
         self.datatype = datatype
         self._candidates = []
         candidates_dict = {}
-
+        
         for candidate in candidates:
             id_candidate = candidate["id"]
             name_norm = utils.clean_str(candidate["name"]) 
@@ -19,28 +19,38 @@ class Cell:
             row_content_norm = utils.clean_str(row_content)
             desc_score = round(metrics.compute_similarity_between_string(desc_norm, row_content_norm), 3)
             desc_score_ngram = round(metrics.compute_similarity_between_string(desc_norm, row_content_norm, 3), 3)
-
+           
             features = {
-                "ntoken": candidate["ntoken"],
+                "ambiguity_mention": candidate["ambiguity_mention"],
+                "ncorrects_tokens": candidate["corrects_tokens"],
+                "ntoken_mention": candidate["ntoken_mention"],
+                "ntoken_entity": candidate["ntoken_entity"],
+                "length_mention": candidate["length_mention"],
+                "length_entity": candidate["length_entity"],
                 "popularity": candidate["popularity"],
                 "pos_score": candidate["pos_score"],
                 "es_score": candidate["es_score"],
-                "es_diff_score": candidate["es_diff_score"],
-                "ed": candidate["ed_score"],
-                "jaccard": candidate["jaccard_score"],
-                "jaccardNgram": candidate["jaccardNgram_score"],
-                "cosine_similarity": candidate["cosine_similarity"],
+                "ed_score": candidate["ed_score"],
+                "jaccard_score": candidate["jaccard_score"],
+                "jaccardNgram_score": candidate["jaccardNgram_score"],
+                #"cosine_similarity": candidate["cosine_similarity"], deprecated
                 "p_subj_ne": 0,
-                "p_subj_lit": 0,
+                "p_subj_lit_datatype": 0,
+                "p_subj_lit_all_datatype": 0,
+                "p_subj_lit_row": 0,
                 "p_obj_ne": 0,
                 "desc": desc_score,
                 "descNgram": desc_score_ngram,
-                "cpa": 0,
-                "cpaMax": 0,
-                "cta": 0,
-                "ctaMax": 0,
-                "rho": 0,
-                "diff": 0
+                "cta_t1": 0,
+                "cta_t2": 0,
+                "cta_t3": 0,
+                "cta_t4": 0,
+                "cta_t5": 0,
+                "cpa_t1": 0,
+                "cpa_t2": 0,
+                "cpa_t3": 0,
+                "cpa_t4": 0,
+                "cpa_t5": 0
             }
 
            

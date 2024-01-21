@@ -22,12 +22,8 @@ class Prediction:
                     index = indexes[cell._id_col]
                     indexes[cell._id_col] += 1
                     feature = round(float(prediction[cell._id_col][index][1]), 3)
-                    if feature_name == "rho'": 
-                        candidate[feature_name] = feature
-                    else:
-                        candidate["features"][feature_name] = feature    
-                if feature_name == "rho'":        
-                    candidates.sort(key=lambda x:x[feature_name], reverse=True)       
-                else:
-                    candidates.sort(key=lambda x:x["features"][feature_name], reverse=True)    
+                    candidate[feature_name] = feature
+                
+                candidates.sort(key=lambda x:x[feature_name], reverse=True)       
+            
             

@@ -74,7 +74,7 @@ def get_cea_pre_linking_data(metadata, rows):
             candidates = cell.candidates()
             wc = []
             for candidate in cell.candidates():
-                if (candidates[0]["features"]["rho"] - candidate["features"]["rho"]) < THRESHOLD:
+                if (candidates[0]["rho"] - candidate["rho"]) < THRESHOLD:
                     wc.append(candidate.copy())
             
             if len(wc) == 1:

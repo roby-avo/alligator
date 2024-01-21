@@ -31,6 +31,13 @@ class Row:
             if not cell.is_lit_cell:
                 ne_cells.append(cell)
         return ne_cells        
+    
+    def get_lit_cells(self):
+        lit_cells = []
+        for cell in self.cells:
+            if cell.is_lit_cell:
+                lit_cells.append(cell)
+        return lit_cells       
 
     def get_columns_type(self):
         types = {"SUBJ": None, "NE": [], "LIT": []}
@@ -46,17 +53,19 @@ class Row:
     def get_cells(self):
         return self.cells
 
-    def get_row_text(self):    
+    def get_row_text(self, filter_by=set()):    
         buffer = []
         for cell in self.cells:
-            buffer.append(cell.content)
+            if len(filter_by) == 0 or ("LIT" in filter_by and cell.is_lit_cell):
+                buffer.append(cell.content)
         return buffer    
 
-    def get_text(self):    
+    def get_text(self, filter_by=set()):    
         buffer = []
         for cell in self.cells:
-            buffer.append(cell.content)
+            if len(filter_by) == 0 or ("LIT" in filter_by and cell.is_lit_cell):
+                buffer.append(cell.content)
         return " ".join(buffer)
-
+    
     def __len__(self):
         return len(self.cells)

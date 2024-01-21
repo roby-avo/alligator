@@ -139,7 +139,7 @@ class LamAPI():
         return result
 
 
-    def lookup(self, string, ngrams=False, fuzzy=False, types=None, description=None, limit=100):
+    def lookup(self, string, ngrams=False, fuzzy=False, types=None, limit=100, ids=None):
         params = {
             'token': LAMAPI_TOKEN,
             'name': string,
@@ -147,8 +147,8 @@ class LamAPI():
             'fuzzy': fuzzy,
             'types': types,
             'kg': self.kg,
-            'description': description,
-            'limit': limit
+            'limit': limit,
+            'ids': ids
         }
         result = self.__submit_get(self._url.lookup_url(), params)
         if len(result) > 1:

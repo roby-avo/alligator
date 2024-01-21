@@ -1,30 +1,27 @@
 import utils.metrics as metrics
-import json
-
-with open("./process/cache_obj.json") as f:
-    cache_obj = json.loads(f.read())
-
-with open("./process/cache_lit.json") as f:
-    cache_lit = json.loads(f.read())
+import utils.utils as utils
 
 class FeauturesExtraction:
     def __init__(self, rows, lamAPI):
         self._rows = rows
         self._lamAPI = lamAPI
+        self._cache_obj = {}
+        self._cache_lit = {}
         
-        
+
     def compute_feautures(self):
         for row in self._rows:
             ne_cells = row.get_ne_cells()
+            lit_cells = row.get_lit_cells()
             cells = row.get_cells()
             for ne_cell in ne_cells:
                 for cell in cells:
                     if cell == ne_cell:
                         continue
                     elif cell.is_lit_cell:
-                        self._match_lit_cells(ne_cell, cell)
+                        self._match_lit_cells(ne_cell, cell, row, len(lit_cells))
                     else:
-                        self._compute_similarity_between_ne_cells(ne_cell, cell)
+                        self._compute_similarity_between_ne_cells(ne_cell, cell, len(ne_cells))
         
         return self._extract_features()
 
@@ -38,22 +35,22 @@ class FeauturesExtraction:
         return features    
 
 
-    def _compute_similarity_between_ne_cells(self, subj_cell, obj_cell):
-        subj_id_candidates = [candidate["id"] for candidate in subj_cell.candidates() if candidate["id"] not in cache_obj]
+    def _compute_similarity_between_ne_cells(self, subj_cell, obj_cell, nNE_cells):
+        subj_id_candidates = [candidate["id"] for candidate in subj_cell.candidates() if candidate["id"] not in self._cache_obj]
 
         if len(subj_id_candidates) > 0:
             subjects_objects = self._lamAPI.objects(subj_id_candidates)
+
         object_rel_score_buffer = {}
         for subj_candidate in subj_cell.candidates():
             id_subject = subj_candidate["id"]
-            
-            if id_subject not in cache_obj:
-                subj_candidates_objects = subjects_objects.get(id_subject, {}).get("objects", {})
-            else:    
-                subj_candidates_objects = cache_obj.get(id_subject, {})
-                cache_obj[id_subject] = subj_candidates_objects
-            #subj_candidates_objects = subjects_objects.get(id_subject, {}).get("objects", {})
 
+            if id_subject not in self._cache_obj:
+                subj_candidates_objects = subjects_objects.get(id_subject, {}).get("objects", {})
+                self._cache_obj[id_subject] = subj_candidates_objects
+            else:    
+                subj_candidates_objects = self._cache_obj.get(id_subject, {})
+                
             objects_set = set(subj_candidates_objects.keys())
             obj_score_max = 0
             objects_itersection = objects_set.intersection(set([candidate["id"] for candidate in obj_cell.candidates()]))
@@ -61,14 +58,18 @@ class FeauturesExtraction:
                 id_object = obj_candidate["id"] 
                 if id_object not in objects_itersection:
                     continue
+                
+                string_similarity_features = [obj_candidate["features"][f] for f in ["ed_score", "jaccard_score", "jaccardNgram_score"]]
+                p_subj_ne = round(sum(string_similarity_features) / len(string_similarity_features), 3)
 
-                p_subj_ne = obj_candidate["features"]["ed"]
                 if p_subj_ne > obj_score_max:
                     obj_score_max = p_subj_ne
                    
                 if id_object not in object_rel_score_buffer:
                     object_rel_score_buffer[id_object] = 0
-                score_rel = subj_candidate["features"]["ed"]
+                
+                string_similarity_features = [subj_candidate["features"][f] for f in ["ed_score", "jaccard_score", "jaccardNgram_score"]]
+                score_rel = round(sum(string_similarity_features) / len(string_similarity_features), 3)
                 if score_rel > object_rel_score_buffer[id_object]:
                     object_rel_score_buffer[id_object] = score_rel
                 for predicate in subj_candidates_objects[id_object]:
@@ -78,17 +79,27 @@ class FeauturesExtraction:
                         "s": round(p_subj_ne, 3)
                     })
                     subj_candidate["predicates"][str(obj_cell._id_col)][predicate] = p_subj_ne
-            subj_candidate["features"]["p_subj_ne"] += obj_score_max
+            subj_candidate["features"]["p_subj_ne"] += round(obj_score_max/ nNE_cells, 3)
         
         for obj_candidate in obj_cell.candidates():
             id_object = obj_candidate["id"]  
             if id_object not in object_rel_score_buffer:
                 continue
-            obj_candidate["features"]["p_obj_ne"] += object_rel_score_buffer[id_object]  
+            obj_candidate["features"]["p_obj_ne"] += round(object_rel_score_buffer[id_object]/nNE_cells, 3)  
 
-        
+    
+    def _get_literal_values_string(self, subj_literals):
+        lit_strings = []
+        for datatype in subj_literals:
+            for predicate in subj_literals[datatype]:
+                for value in subj_literals[datatype][predicate]:
+                    if value.startswith('+') and value[1:].isdigit():
+                        value = value[1:]
+                    lit_strings.append(utils.clean_str(value))
+        return " ".join(lit_strings)
 
-    def _match_lit_cells(self, subj_cell, obj_cell):
+
+    def _match_lit_cells(self, subj_cell, obj_cell, row, nLIT_cells):
     
         def get_score_based_on_datatype(valueInCell, valueFromKG, datatype):
             score = 0
@@ -101,24 +112,31 @@ class FeauturesExtraction:
                 score = metrics.compute_similarity_between_string(valueInCell, valueFromKg.lower())
             return score
 
-        subj_id_candidates = [candidate["id"] for candidate in subj_cell.candidates() if candidate["id"] not in cache_lit]
+       
+        subj_id_candidates = [candidate["id"] for candidate in subj_cell.candidates() if candidate["id"] not in self._cache_lit]
         if len(subj_id_candidates) > 0:
             subjects_literals = self._lamAPI.literals(subj_id_candidates)
-            if len(subjects_literals) > 0:
+            if len(subjects_literals) == 0:
                 return
-
+            
         datatype = obj_cell.datatype
         
         for subj_candidate in subj_cell.candidates():
             id_subject = subj_candidate["id"]
 
-            if id_subject not in cache_lit:
+            if id_subject not in self._cache_lit:
                 subj_literals = subjects_literals.get(id_subject, {}).get("literals", {})
+                self._cache_lit[id_subject] = subj_literals
             else:   
-                subj_literals = cache_lit.get(id_subject, {})
-                cache_lit[id_subject] = subj_literals
-            
-            #subj_literals = subjects_literals.get(id_subject, {}).get("literals", {})
+                subj_literals = self._cache_lit.get(id_subject, {})
+                
+            lit_string = self._get_literal_values_string(subj_literals)
+            row_text_all = utils.clean_str(row.get_text())
+            row_text_lit = utils.clean_str(row.get_text({"LIT"}))
+            p_subj_lit_all_datatype = metrics.compute_similarity_between_string_token_based(lit_string, row_text_lit)
+            p_subj_lit_row = metrics.compute_similarity_between_string_token_based(lit_string, row_text_all)
+            subj_candidate["features"]["p_subj_lit_all_datatype"] = round(p_subj_lit_all_datatype, 3)
+            subj_candidate["features"]["p_subj_lit_row"] = round(p_subj_lit_row, 3)
 
             new_datatype = datatype
 
@@ -146,4 +164,4 @@ class FeauturesExtraction:
                         if p_subj_lit > subj_candidate["predicates"][str(obj_cell._id_col)][predicate]:
                             subj_candidate["predicates"][str(obj_cell._id_col)][predicate] = p_subj_lit    
                             
-            subj_candidate["features"]["p_subj_lit"] += round(max_score, 3) 
+            subj_candidate["features"]["p_subj_lit_datatype"] += round(max_score/nLIT_cells, 3)
