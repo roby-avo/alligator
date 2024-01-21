@@ -18,8 +18,8 @@ from wrapper.mongodb_conn import get_collection
 
 start = time.time()
 
-pn_neural_path = "./process/ml_models/Linker1.0.h5"
-rn_neural_path = "./process/ml_models/Linker1.0.h5"
+pn_neural_path = "./process/ml_models/Linker1.0_PN.h5"
+rn_neural_path = "./process/ml_models/Linker1.0_RN.h5"
 
 pn_model = load_model(pn_neural_path)    
 rn_model = load_model(rn_neural_path)    
