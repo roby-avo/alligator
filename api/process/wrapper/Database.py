@@ -19,6 +19,31 @@ class MongoDBWrapper:
                             authSource='admin'
                         )
         self.database = self.client[MONGO_DBNAME]
+        self.create_indexes()
+
+    
+    def create_indexes(self):
+        collections = ['cea', 'cta', 'cpa', 'ceaPrelinking', 'candidateScored']
+        for collection in collections:
+            c = self.get_collection(collection)
+            c.create_index([('tableName', 1), ('datasetName', 1)])
+            c.create_index([('tableName', 1), ('datasetName', 1), ('page', 1)])
+            c.create_index([('datasetName', 1)])
+            c.create_index([('tableName', 1)])
+            
+        c = self.get_collection('row')
+        c.create_index([('state', 1)])
+        c.create_index([('datasetName', 1)])
+        c.create_index([('datasetName', 1), ('tableName', 1)])
+
+        c = self.get_collection('dataset')
+        c.create_index([('datasetName', 1)], unique=True)
+        
+        c = self.get_collection('table')
+        c.create_index([('datasetName', 1)])
+        c.create_index([('tableName', 1)])
+        c.create_index([('datasetName', 1), ('tableName', 1)], unique=True)
+        c.create_index([('idJob', 1)])
 
     def get_collection(self, collection_name):
         """

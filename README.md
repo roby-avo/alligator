@@ -30,3 +30,69 @@ The Alligator pipeline consists of the following steps:
 
 Through these steps, Alligator ensures a robust and accurate process for entity linking in your tabular data. It aims to facilitate the seamless integration of your data with Knowledge Graphs, enhancing the capabilities of your machine learning applications.
 
+
+# SETUP
+
+This section guides you through the setup process for the Alligator application. Please follow these steps carefully to ensure a successful setup.
+
+## Preliminary Step: Install Docker and Docker-Compose
+
+Before proceeding, ensure that Docker and Docker-Compose are installed on your system. These are essential for creating and managing the Alligator application's containers. 
+
+Refer to the official Docker documentation for installation instructions: [Docker](https://docs.docker.com/get-docker/) and [Docker-Compose](https://docs.docker.com/compose/install/).
+
+## Step 1: Environment Configuration
+
+1. **.env File**: The application relies on environment variables specified in a `.env` file. An example template `.env-template` is provided in the repository. Please make sure to fill out the `.env` file correctly before proceeding. 
+
+2. **LamAPI Dependency**: Alligator requires an instance of LamAPI. Ensure you have LamAPI up and running. For more information on setting up LamAPI, visit [LamAPI Repository](https://github.com/roby-avo/lamAPI).
+
+## Step 2: Running the Application
+
+1. **Starting the Application**: Navigate to the Alligator directory and execute the following command:
+   
+   ```bash
+   docker-compose up
+
+This command builds and starts the necessary containers for the Alligator application.
+
+### Verifying the Setup
+Once the application is running, you can access the SWAGGER UI interface at `http://localhost:<ALLIGATOR_PORT>`. Replace `<ALLIGATOR_PORT>` with the value you specified in the `.env` file for `ALLIGATOR_PORT`.
+
+### Environment Variables Reference
+Below is a brief description of the environment variables required in the `.env` file:
+
+#### Alligator Configuration
+- `ALLIGATOR_TOKEN`: Authentication token for Alligator.
+- `ALLIGATOR_PORT`: The port on which the Alligator service will run.
+- `MAX_NUMBER_OF_JOB`: Maximum number of concurrent jobs allowed.
+
+#### MongoDB Configuration
+- `MONGO_ENDPOINT`: MongoDB connection endpoint.
+- `MONGO_INITDB_ROOT_USERNAME`: Root username for MongoDB.
+- `MONGO_INITDB_ROOT_PASSWORD`: Root password for MongoDB.
+- `MONGO_DBNAME`: Name of the MongoDB database.
+- `MONGO_PORT`: Port for MongoDB connection.
+
+#### Redis Configuration
+- `REDIS_ENDPOINT`: Redis server connection endpoint.
+- `REDIS_JOB_DB`: Redis database number for job data.
+
+#### LAMAPI Configuration
+- `LAMAPI_ENDPOINT`: Endpoint for the LamAPI service.
+- `LAMAPI_TOKEN`: Authentication token for LamAPI.
+
+#### Python Version Configuration
+- `PYTHON_VERSION`: Python version to use.
+
+#### MongoDB Version Configuration
+- `MONGO_VERSION`: MongoDB version to use.
+
+#### Configuration Values
+- `CONFIG_VALUES`: Comma-separated configuration values in the order of DATASET_FOR_PAGE, TABLE_FOR_PAGE, CHUNK_SIZE (minimum number of rows for each process).
+
+For a more detailed explanation of these variables, please refer to the `.env-template` file in the repository.
+
+---
+
+After completing these steps, your Alligator application should be set up and operational. For any issues or further configuration, refer to the respective sections in this documentation or the project's GitHub repository.

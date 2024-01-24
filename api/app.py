@@ -21,20 +21,17 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 # Additionally, to suppress Python warnings
 logging.getLogger('tensorflow').setLevel(logging.ERROR)
 
-from indexing import index  # Module for indexing functionality
 from process.wrapper.Database import MongoDBWrapper  # MongoDB database wrapper
 from utils.Dataset import DatasetModel  # Dataset utility model
 from utils.Table import TableModel  # Table utility model
 import pymongo  # MongoDB database interface
 
-# Create an index using the `index` module
-index.create_index()
 
 # Retrieve environment variables for Redis configuration and API token
 REDIS_ENDPOINT = os.environ["REDIS_ENDPOINT"]  # Endpoint for Redis connection
 REDIS_JOB_DB = int(os.environ["REDIS_JOB_DB"])  # Redis database number for jobs
 
-API_TOKEN = os.environ["API_TOKEN"]  # API token for authentication
+API_TOKEN = os.environ["ALLIGATOR_TOKEN"]  # API token for authentication
 
 # Initialize Redis client for tracking active jobs
 job_active = redis.Redis(host=REDIS_ENDPOINT, db=REDIS_JOB_DB)
@@ -629,8 +626,8 @@ class TableID(Resource):
                             "features": [
                                 {"id":"delta", "value": candidate.get("delta")},
                                 {"id":"omega", "value": candidate.get("score")},
-                                {"id":"levenshtein_distance", "value": candidate["features"].get("ed")},
-                                {"id":"jaccard_distance", "value": candidate["features"].get("jaccard")},
+                                {"id":"levenshtein_distance", "value": candidate["features"].get("ed_score")},
+                                {"id":"jaccard_distance", "value": candidate["features"].get("jaccard_score")},
                                 {"id":"popularity", "value": candidate["features"].get("popularity")}
                             ]
                         })
