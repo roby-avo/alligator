@@ -9,6 +9,8 @@ class TableModel:
     DATASET_FOR_PAGE = int(config_values[0])
     TABLE_FOR_PAGE = int(config_values[1])
     CHUNCK_SIZE = int(config_values[2])
+    SPLIT_THRESHOLD = 2 * CHUNCK_SIZE  # Set SPLIT_THRESHOLD based on CHUNCK_SIZE
+
 
     def __init__(self, db):
         self._db = db
