@@ -1,20 +1,6 @@
 version: "3"
 
 services:
-  jupyter:
-    image: roby944/jupyter
-    container_name: alligator_jupyter
-    environment:
-      JUPYTER_ENABLE_LAB: "yes"
-      RESTARTABLE: "yes"
-    env_file:
-      - ./.env  
-    ports:
-      - "${MY_JUPYTER_PORT}:8888"
-    restart: always
-    volumes:
-      - ./api:/home/jovyan/work
-  
   api:
     build:
       context: .
@@ -27,7 +13,7 @@ services:
     environment:
       FLASK_DEBUG: 1
     ports:
-      - "${API_PORT}:5000"
+      - "${ALLIGATOR_PORT}:5000"
     restart: always
     volumes:
       - ./api:/code
