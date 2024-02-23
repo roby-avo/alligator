@@ -95,8 +95,7 @@ class TableModel:
         num_rows = len(df)
         if num_rows >= TableModel.SPLIT_THRESHOLD:
             offset = 1
-            chunks = [df.iloc[i: i + TableModel.CHUNK_SIZE] for i in range(0, num_rows, TableModel.CHUNK_SIZE)]
-            
+            chunks = [df.iloc[i: i + TableModel.CHUNCK_SIZE] for i in range(0, num_rows, TableModel.CHUNCK_SIZE)]            
             # If the last chunk is smaller than MIN_ROWS, combine it with the previous chunk
             if len(chunks[-1]) < self.MIN_ROWS:
                 chunks[-2] = pd.concat([chunks[-2], chunks[-1]])
