@@ -97,7 +97,7 @@ class TableModel:
             offset = 1
             chunks = [df.iloc[i: i + TableModel.CHUNCK_SIZE] for i in range(0, num_rows, TableModel.CHUNCK_SIZE)]            
             # If the last chunk is smaller than MIN_ROWS, combine it with the previous chunk
-            if len(chunks[-1]) < self.MIN_ROWS:
+            if len(chunks[-1]) < TableModel.CHUNCK_SIZE:
                 chunks[-2] = pd.concat([chunks[-2], chunks[-1]])
                 chunks.pop()
             
