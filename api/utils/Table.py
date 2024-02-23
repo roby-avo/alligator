@@ -50,11 +50,11 @@ class TableModel:
                 entry['candidateSize'] = 100
 
             # Split rows into chunks of CHUNCK_SIZE and create new table entries for each chunk
-            if len(rows) >= self.CHUNCK_SIZE * 2:
-                chunks = [rows[i: i + self.CHUNCK_SIZE] for i in range(0, len(rows), self.CHUNCK_SIZE)]
+            if len(rows) >= TableModel.CHUNCK_SIZE * 2:
+                chunks = [rows[i: i + TableModel.CHUNCK_SIZE] for i in range(0, len(rows), TableModel.CHUNCK_SIZE)]
                 
                 # If the last chunk is smaller than MIN_ROWS, combine it with the previous chunk
-                if len(chunks[-1]) < self.CHUNCK_SIZE:
+                if len(chunks[-1]) < TableModel.CHUNCK_SIZE:
                     chunks[-2].extend(chunks[-1])
                     chunks.pop()
                 
@@ -93,9 +93,9 @@ class TableModel:
         self.fill_table_metadata(table_obj)    
         # Split DataFrame rows into chunks of CHUNK_SIZE and create new table entries for each chunk
         num_rows = len(df)
-        if num_rows >= self.SPLIT_THRESHOLD:
+        if num_rows >= TableModel.SPLIT_THRESHOLD:
             offset = 1
-            chunks = [df.iloc[i: i + self.CHUNK_SIZE] for i in range(0, num_rows, self.CHUNK_SIZE)]
+            chunks = [df.iloc[i: i + TableModel.CHUNK_SIZE] for i in range(0, num_rows, TableModel.CHUNK_SIZE)]
             
             # If the last chunk is smaller than MIN_ROWS, combine it with the previous chunk
             if len(chunks[-1]) < self.MIN_ROWS:
@@ -165,7 +165,7 @@ class TableModel:
             for table_name in self.table_metadata[dataset_name]:
                 metadata = self.table_metadata[dataset_name][table_name]
                 total_tables = self._db.get_collection("table").count_documents({"datasetName": dataset_name})
-                page = math.floor(total_tables / self.TABLE_FOR_PAGE) + 1
+                page = math.floor(total_tables / TableModel.TABLE_FOR_PAGE) + 1
                 metadata["page"] = page
                 if Nrows is not None:
                     metadata["Nrows"] = Nrows

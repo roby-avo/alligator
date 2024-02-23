@@ -13,7 +13,7 @@ class DatasetModel:
     def store_datasets(self):
         dataset_c = self._db.get_collection("dataset")
         total_datasets = dataset_c.estimated_document_count()
-        page = math.floor(total_datasets / self.DATASET_FOR_PAGE) + 1
+        page = math.floor(total_datasets / DatasetModel.DATASET_FOR_PAGE) + 1
 
         for dataset_name in self._table_metadata:
             n_tables = len(self._table_metadata[dataset_name])
