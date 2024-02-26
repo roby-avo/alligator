@@ -1,3 +1,4 @@
+import asyncio
 import utils.metrics as metrics
 import utils.utils as utils
 
@@ -7,24 +8,50 @@ class FeauturesExtraction:
         self._lamAPI = lamAPI
         self._cache_obj = {}
         self._cache_lit = {}
+        self._lock_obj = asyncio.Lock()  # Lock for cache_obj
+        self._lock_lit = asyncio.Lock()  # Lock for cache_lit
         
 
-    def compute_feautures(self):
+    # async def compute_feautures(self):
+    #     for row in self._rows:
+    #         ne_cells = row.get_ne_cells()
+    #         lit_cells = row.get_lit_cells()
+    #         cells = row.get_cells()
+    #         tasks = []
+    #         for ne_cell in ne_cells:
+    #             for cell in cells:
+    #                 if cell == ne_cell:
+    #                     continue
+    #                 elif cell.is_lit_cell:
+    #                     tasks.append(asyncio.create_task(self._match_lit_cells(ne_cell, cell, row, len(lit_cells))))
+    #                     #self._match_lit_cells(ne_cell, cell, row, len(lit_cells))
+    #                 else:
+    #                     tasks.append(asyncio.create_task(self._compute_similarity_between_ne_cells(ne_cell, cell, len(ne_cells))))
+    #                     #self._compute_similarity_between_ne_cells(ne_cell, cell, len(ne_cells))
+    #         await asyncio.gather(*tasks)    
+    #     return self._extract_features()
+        
+    async def compute_feautures(self):
+        tasks = []
         for row in self._rows:
             ne_cells = row.get_ne_cells()
             lit_cells = row.get_lit_cells()
             cells = row.get_cells()
-            for ne_cell in ne_cells:
-                for cell in cells:
-                    if cell == ne_cell:
-                        continue
-                    elif cell.is_lit_cell:
-                        self._match_lit_cells(ne_cell, cell, row, len(lit_cells))
-                    else:
-                        self._compute_similarity_between_ne_cells(ne_cell, cell, len(ne_cells))
+            tasks.append(asyncio.create_task(self._compute_rows(ne_cells, lit_cells, cells, row)))
+            
+        await asyncio.gather(*tasks)    
         
         return self._extract_features()
 
+    async def _compute_rows(self, ne_cells, lit_cells, cells, row):
+        for ne_cell in ne_cells:
+            for cell in cells:
+                if cell == ne_cell:
+                    continue
+                elif cell.is_lit_cell:
+                    await self._match_lit_cells(ne_cell, cell, row, len(lit_cells))
+                else:
+                    await self._compute_similarity_between_ne_cells(ne_cell, cell, len(ne_cells))
 
     def _extract_features(self):
         features = [[] for _ in range(len(self._rows[0]))]
@@ -35,19 +62,21 @@ class FeauturesExtraction:
         return features    
 
 
-    def _compute_similarity_between_ne_cells(self, subj_cell, obj_cell, nNE_cells):
+    async def _compute_similarity_between_ne_cells(self, subj_cell, obj_cell, nNE_cells):
         subj_id_candidates = [candidate["id"] for candidate in subj_cell.candidates() if candidate["id"] not in self._cache_obj]
 
         if len(subj_id_candidates) > 0:
-            subjects_objects = self._lamAPI.objects(subj_id_candidates)
+            subjects_objects = await self._lamAPI.objects(subj_id_candidates)
 
         object_rel_score_buffer = {}
         for subj_candidate in subj_cell.candidates():
             id_subject = subj_candidate["id"]
 
+            
             if id_subject not in self._cache_obj:
                 subj_candidates_objects = subjects_objects.get(id_subject, {}).get("objects", {})
-                self._cache_obj[id_subject] = subj_candidates_objects
+                async with self._lock_obj:
+                    self._cache_obj[id_subject] = subj_candidates_objects
             else:    
                 subj_candidates_objects = self._cache_obj.get(id_subject, {})
                 
@@ -99,7 +128,7 @@ class FeauturesExtraction:
         return " ".join(lit_strings)
 
 
-    def _match_lit_cells(self, subj_cell, obj_cell, row, nLIT_cells):
+    async def _match_lit_cells(self, subj_cell, obj_cell, row, nLIT_cells):
     
         def get_score_based_on_datatype(valueInCell, valueFromKG, datatype):
             score = 0
@@ -115,7 +144,7 @@ class FeauturesExtraction:
        
         subj_id_candidates = [candidate["id"] for candidate in subj_cell.candidates() if candidate["id"] not in self._cache_lit]
         if len(subj_id_candidates) > 0:
-            subjects_literals = self._lamAPI.literals(subj_id_candidates)
+            subjects_literals = await self._lamAPI.literals(subj_id_candidates)
             if len(subjects_literals) == 0:
                 return
             
@@ -124,9 +153,11 @@ class FeauturesExtraction:
         for subj_candidate in subj_cell.candidates():
             id_subject = subj_candidate["id"]
 
+           
             if id_subject not in self._cache_lit:
                 subj_literals = subjects_literals.get(id_subject, {}).get("literals", {})
-                self._cache_lit[id_subject] = subj_literals
+                async with self._lock_lit:
+                    self._cache_lit[id_subject] = subj_literals
             else:   
                 subj_literals = self._cache_lit.get(id_subject, {})
                 

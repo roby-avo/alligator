@@ -6,7 +6,7 @@ class DataPreparation:
         self._lamAPI = lamAPI
 
   
-    def compute_datatype(self):
+    async def compute_datatype(self):
         column_metadata = {}
         target = {"SUBJ": None, "NE": [], "LIT": [], "LIT_DATATYPE": {}}
         columns_data = [[] for _ in range(0, len(self._rows[0]['data']))]
@@ -14,7 +14,7 @@ class DataPreparation:
             for id_col, cell in enumerate(row["data"]):
                 columns_data[id_col].append(str(cell))
         
-        metadata = self._lamAPI.column_analysis(columns_data)
+        metadata = await self._lamAPI.column_analysis(columns_data)
         first_NE_column = False  
         for id_col in metadata:
             tag = metadata[id_col]["tag"]
