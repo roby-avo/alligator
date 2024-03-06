@@ -29,7 +29,7 @@ class DatasetModel:
                     },
                     "%": 0,
                     "page": page,
-                    "status": "TODO"
+                    "process": "TODO"
                 })
             else:
                 TODO = result["status"]["TODO"] + n_tables

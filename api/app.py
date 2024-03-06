@@ -382,7 +382,7 @@ class DatasetID(Resource):
             out = [
                 {
                     "tableName": result["tableName"],
-                    "status": result["process"]
+                    "status": result["status"]
                 }
                 for result in results
             ]
@@ -404,19 +404,27 @@ class DatasetID(Resource):
         """
         parser = reqparse.RequestParser()
         parser.add_argument("token", type=str, help="variable 1", location="args")
-        parser.add_argument("datasetName", type=str, help="variable 2", location="args")
+        dataset_name = datasetName
         args = parser.parse_args()
         token = args["token"]
-        dataset_name = args["datasetName"]
         if not validate_token(token):
             return {"Error": "Invalid Token"}, 403
         try:
-            result = dataset_c.delete_one({"datasetName": dataset_name})
+            self._delete_dataset(dataset_name)
         except Exception as e:
             print({"traceback": traceback.format_exc()}, flush=True)
             return {"status": "Error", "message": str(e)}, 400
-        return list(result), 200           
+        return {"datasetName": datasetName, "deleted": True}, 200           
 
+    def _delete_dataset(self, dataset_name):
+        query = {"datasetName": dataset_name}
+        dataset_c.delete_one(query)
+        row_c.delete_many(query)
+        table_c.delete_one(query)
+        cea_c.delete_many(query)
+        cta_c.delete_many(query)
+        cpa_c.delete_many(query)
+        candidate_scored_c.delete_many(query)
 
 
 @ds.route("/<datasetName>/table")
@@ -474,7 +482,7 @@ class DatasetTable(Resource):
             dataset = DatasetModel(mongoDBWrapper, table.table_metadata)
             dataset.store_datasets()
             tables = table.get_data()
-            mongoDBWrapper.get_collection("row").insert_many(tables)    
+            row_c.insert_many(tables)    
             job_active.delete("STOP")
             out = [{"id": str(table["_id"]),  "datasetName": table["datasetName"], "tableName": table["tableName"]} for table in tables]
         except pymongo.errors.DuplicateKeyError as e:
@@ -510,16 +518,17 @@ class DatasetTable(Resource):
 
         try:
             query = {"datasetName": datasetName, "page": int(page)}
-            results = mongoDBWrapper.get_collection("table").find(query)
+            results = row_c.find(query)
             out = []
             for result in results:
                 out.append({
                     "datasetName": result["datasetName"],
                     "tableName": result["tableName"],
                     "nrows": result["Nrows"],
-                    "status": result["state"]
+                    "status": result["status"]
                 })
         except Exception as e:
+            print({"traceback": traceback.format_exc()}, flush=True)
             out = {"status": "Error", "message": str(e)}, 400        
 
         return out, 200
@@ -679,11 +688,12 @@ class TableID(Resource):
 
         try:
             self._delete_table(datasetName, tableName)
-            return {"datasetName": datasetName, "tableName": tableName, "deleted": True}, 200
         except Exception as e:
             print({"traceback": traceback.format_exc()}, flush=True)
             return {"status": "Error", "message": str(e)}, 400
 
+        return {"datasetName": datasetName, "tableName": tableName, "deleted": True}, 200
+    
     def _delete_table(self, dataset_name, table_name):
         query = {"datasetName": dataset_name, "tableName": table_name}
         row_c.delete_many(query)
