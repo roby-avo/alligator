@@ -24,7 +24,7 @@ class LamAPI():
                     result = result[kg]
                 return result
 
-    async def __to_format(self, response):
+    async def __to_format(self, response, url, params, json_data=None):
         content_type = response.headers.get('Content-Type', '')
         if 'application/json' in content_type:
             if self.format == "json":
@@ -38,18 +38,19 @@ class LamAPI():
         else:
             # Handle non-JSON response here
             print(await response.text(), flush=True)
+            print(response.status, flush=True)
+            print(f"Request to {url} with params {params} and json_data {json_data} returned a non-JSON response.", flush=True)
             return {}  # or raise an appropriate exception
-
 
     async def __submit_get(self, url, params):
         async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(ssl=False)) as session:
             async with session.get(url, headers=headers, params=params) as response:
-                return await self.__to_format(response)
+                return await self.__to_format(response, url, params)
 
     async def __submit_post(self, url, params, json_data):
         async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(ssl=False)) as session:
             async with session.post(url, headers=headers, params=params, json=json_data) as response:
-                return await self.__to_format(response)
+                return await self.__to_format(response, url, params, json_data)
 
     async def literal_recognizer(self, column):
         json_data = {

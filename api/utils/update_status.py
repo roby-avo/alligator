@@ -128,10 +128,14 @@ while True:
         ])
         status = {result["_id"]:result["count"] for result in tables}
         TODO, DOING, DONE = [status.get(key, 0) for key in ["TODO", "DOING", "DONE"]]
+        percent = round(DONE/(TODO+DOING+DONE), 2)
+        status = "DOING" if TODO + DOING > 0 else "DONE"
         dataset_c.update_one({"datasetName": dataset_name}, {"$set": {
             "status.TODO": TODO, 
             "status.DOING": DOING, 
-            "status.DONE": DONE
+            "status.DONE": DONE,
+            "percent": percent,
+            "status": status
         }})
 
     
