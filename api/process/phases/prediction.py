@@ -1,3 +1,5 @@
+import tensorflow as tf
+
 class Prediction:
     def __init__(self, rows, feautures, model):
         self._rows = rows
@@ -10,7 +12,7 @@ class Prediction:
         for column_features in self._features:
             pred = [] 
             if len(column_features) > 0:
-                pred = self._model.predict(column_features)
+                pred = self._model.predict(tf.convert_to_tensor(column_features))
             prediction.append(pred)
             indexes.append(0)
         
