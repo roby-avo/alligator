@@ -591,7 +591,9 @@ class TableID(Resource):
         query = {"datasetName": dataset_name, "tableName": table_name}
         if page is not None:
             query["page"] = page
-        results = row_c.find(query)    
+        results = row_c.find(query)
+        if results is None:
+            return {"status": "Error", "message": "Table not found"}, 404    
         out = [
             {
                 "datasetName": result["datasetName"],
