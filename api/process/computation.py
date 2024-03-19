@@ -46,14 +46,16 @@ async def main():
     cta_c = get_collection('cta')
     header_candidate_scored_c = get_collection('headerCandidateScored')
     candidate_scored_c = get_collection('candidateScored')
-
+    print("Start", flush=True)
     data = row_c.find_one_and_update({"status": "TODO"}, {"$set": {"status": "DOING"}})
 
 
     if data is None:
+        print("No data to process", flush=True)
         job_active.set("STOP", "")
         sys.exit(0)
 
+    print("Data to process", flush=True)
     header = data.get("header", [])
     rows_data = data["rows"]
     kg_reference = data["kgReference"]
@@ -110,6 +112,7 @@ async def main():
         execution_time = round(end - start, 2)
         obj_row_update["time"] = execution_time
         row_c.update_one({"_id": _id}, {"$set": obj_row_update})
+        print("End", flush=True)
     except Exception as e:
         log_c.insert_one({
             "datasetName": dataset_name, 
