@@ -592,8 +592,6 @@ class TableID(Resource):
         if page is not None:
             query["page"] = page
         results = row_c.find(query)
-        if results is None:
-            return {"status": "Error", "message": "Table not found"}, 404    
         out = [
             {
                 "datasetName": result["datasetName"],
@@ -607,6 +605,9 @@ class TableID(Resource):
             for result in results
         ]
 
+        if len(out) == 0:
+            return {"status": "Error", "message": "Table not found"}, 404
+        
         buffer = out[0]
         for o in out[1:]:
             buffer["rows"] += o["rows"]
