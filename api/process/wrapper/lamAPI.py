@@ -1,5 +1,6 @@
 import os
 import aiohttp
+import asyncio
 from wrapper.URLs import URLs
 
 headers = {
@@ -9,20 +10,14 @@ headers = {
 LAMAPI_TOKEN = os.environ["LAMAPI_TOKEN"]
 
 class LamAPI():
-    def __init__(self, LAMAPI_HOST, client_key, response_format="json", kg="wikidata") -> None:
+    def __init__(self, LAMAPI_HOST, client_key, response_format="json", kg="wikidata", max_concurrent_requests=10) -> None:
         self.format = response_format
         base_url = LAMAPI_HOST
         self._url = URLs(base_url, response_format=response_format)
         self.client_key = client_key
         self.kg = kg
-
-    async def _exec_post(self, params, json_data, url, kg):
-        async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(ssl=False)) as session:
-            async with session.post(url, params=params, headers=headers, json=json_data) as response:
-                result = await response.json()
-                if kg in result:
-                    result = result[kg]
-                return result
+        # Initialize the semaphore with the max_concurrent_requests limit
+        self.semaphore = asyncio.Semaphore(max_concurrent_requests)
 
     async def __to_format(self, response, url, params, json_data=None):
         content_type = response.headers.get('Content-Type', '')
@@ -48,9 +43,10 @@ class LamAPI():
                 return await self.__to_format(response, url, params)
 
     async def __submit_post(self, url, params, json_data):
-        async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(ssl=False)) as session:
-            async with session.post(url, headers=headers, params=params, json=json_data) as response:
-                return await self.__to_format(response, url, params, json_data)
+        async with self.semaphore:
+            async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(ssl=False)) as session:
+                async with session.post(url, headers=headers, params=params, json=json_data) as response:
+                    return await self.__to_format(response, url, params, json_data)
 
     async def literal_recognizer(self, column):
         json_data = {
