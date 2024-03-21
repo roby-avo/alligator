@@ -10,7 +10,7 @@ headers = {
 LAMAPI_TOKEN = os.environ["LAMAPI_TOKEN"]
 
 class LamAPI():
-    def __init__(self, LAMAPI_HOST, client_key, database, response_format="json", kg="wikidata", max_concurrent_requests=10) -> None:
+    def __init__(self, LAMAPI_HOST, client_key, database, response_format="json", kg="wikidata", max_concurrent_requests=8) -> None:
         self.format = response_format
         self.database = database
         base_url = LAMAPI_HOST
