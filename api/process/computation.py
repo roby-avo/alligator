@@ -15,7 +15,7 @@ from phases.lookup import Lookup
 from phases.prediction import Prediction
 from phases.decision import Decision
 from wrapper.lamAPI import LamAPI
-from process.wrapper.Database import MongoDBWrapper  # MongoDB database wrapper
+from wrapper.Database import MongoDBWrapper  # MongoDB database wrapper
 
 
 
