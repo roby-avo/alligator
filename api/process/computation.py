@@ -15,7 +15,7 @@ from phases.lookup import Lookup
 from phases.prediction import Prediction
 from phases.decision import Decision
 from wrapper.lamAPI import LamAPI
-from wrapper.mongodb_conn import get_collection
+from process.wrapper.Database import MongoDBWrapper  # MongoDB database wrapper
 
 
 
@@ -37,26 +37,23 @@ async def main():
 
     job_active = redis.Redis(host=REDIS_ENDPOINT, db=REDIS_JOB_DB)
 
-    row_c = get_collection('row')
-    log_c = get_collection('log')
-    cea_prelinking_c = get_collection('ceaPrelinking')
-    header_cea_c = get_collection('ceaHeader')
-    cea_c = get_collection('cea')
-    cpa_c = get_collection('cpa')
-    cta_c = get_collection('cta')
-    header_candidate_scored_c = get_collection('headerCandidateScored')
-    candidate_scored_c = get_collection('candidateScored')
-    print("Start", flush=True)
+    # Initialize MongoDB wrapper and get collections for different data models
+    mongoDBWrapper = MongoDBWrapper()
+    log_c = mongoDBWrapper.get_collection("log")
+    row_c = mongoDBWrapper.get_collection("row")
+    candidate_scored_c = mongoDBWrapper.get_collection("candidateScored")
+    cea_c = mongoDBWrapper.get_collection("cea")
+    cpa_c = mongoDBWrapper.get_collection("cpa")
+    cta_c = mongoDBWrapper.get_collection("cta")
+    cea_prelinking_c = mongoDBWrapper.get_collection("ceaPrelinking")
+   
     data = row_c.find_one_and_update({"status": "TODO"}, {"$set": {"status": "DOING"}})
-
 
     if data is None:
         print("No data to process", flush=True)
         job_active.set("STOP", "")
         sys.exit(0)
 
-    print("Data to process", flush=True)
-    header = data.get("header", [])
     rows_data = data["rows"]
     kg_reference = data["kgReference"]
     limit = data["candidateSize"]
@@ -67,7 +64,7 @@ async def main():
     table_name = data["tableName"]
     page = data["page"]
 
-    lamAPI = LamAPI(LAMAPI_HOST, LAMAPI_TOKEN, kg=kg_reference)
+    lamAPI = LamAPI(LAMAPI_HOST, LAMAPI_TOKEN, mongoDBWrapper, kg=kg_reference)
 
     obj_row_update = {"status": "DONE", "time": None}
     dp = DataPreparation(rows_data, lamAPI)

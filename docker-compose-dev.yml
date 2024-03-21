@@ -40,7 +40,7 @@ services:
       - './redis-data:/data'   
 
   jupyter:
-    image: roby944/jupyter-tensorflow-extended
+    image: roby944/jupyter-extended
     container_name: alligator_jupyter
     env_file:
       - ./.env
