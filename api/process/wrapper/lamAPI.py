@@ -140,7 +140,7 @@ class LamAPI():
         # Convert boolean values to strings
         ngrams_str = 'true' if ngrams else 'false'
         fuzzy_str = 'true' if fuzzy else 'false'
-        types_str = ' '.join(types) if types else None  # Provide default value if types is None
+        types_str = ' '.join(types) if types else 'None'  # Provide default value if types is None
         ids_str = ' '.join(ids) if ids else ''  # Provide default value if ids is None
         
         params = {
