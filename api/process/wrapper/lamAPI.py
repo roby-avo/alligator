@@ -140,7 +140,7 @@ class LamAPI():
         # Convert boolean values to strings
         ngrams_str = 'true' if ngrams else 'false'
         fuzzy_str = 'true' if fuzzy else 'false'
-        types_str = ' '.join(types) if types else 'None'  # Provide default value if types is None
+        types_str = ' '.join(types) if types is not None else None
         ids_str = ' '.join(ids) if ids else ''  # Provide default value if ids is None
         
         params = {
@@ -148,10 +148,12 @@ class LamAPI():
             'name': string,
             'ngrams': ngrams_str,
             'fuzzy': fuzzy_str,
-            'types': types_str,
             'kg': self.kg,
             'limit': limit
         }
+        if types_str is not None:
+            params['types'] = types_str
+            
         result = await self.__submit_get(self._url.lookup_url(), params)
         if len(result) > 1:
             result = {"wikidata": result}
