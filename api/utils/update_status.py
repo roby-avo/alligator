@@ -67,9 +67,9 @@ while True:
             status = row["status"]
             TODO, DOING, DONE = [status.get(key, 0) for key in ["TODO", "DOING", "DONE"]]
             if DOING + DONE == 0:
-                continue
-            
-            status = "DOING"
+                status = "TODO"
+            else:
+                status = "DOING"
             if TODO + DOING == 0:
                 status = "DONE"
             table_c.update_one(
