@@ -10,8 +10,9 @@ headers = {
 LAMAPI_TOKEN = os.environ["LAMAPI_TOKEN"]
 
 class LamAPI():
-    def __init__(self, LAMAPI_HOST, client_key, response_format="json", kg="wikidata", max_concurrent_requests=10) -> None:
+    def __init__(self, LAMAPI_HOST, client_key, database, response_format="json", kg="wikidata", max_concurrent_requests=4) -> None:
         self.format = response_format
+        self.database = database
         base_url = LAMAPI_HOST
         self._url = URLs(base_url, response_format=response_format)
         self.client_key = client_key
@@ -32,9 +33,16 @@ class LamAPI():
                 raise Exception("Sorry, Invalid format!")
         else:
             # Handle non-JSON response here
-            print(await response.text(), flush=True)
-            print(response.status, flush=True)
-            print(f"Request to {url} with params {params} and json_data {json_data} returned a non-JSON response.", flush=True)
+            error_type = "generic"
+            if response.status == 502:
+                error_type = "Bad Gateway"
+
+            self.database.get_collection("log").insert_one({
+               "type": error_type,
+               "url": url,
+               "params": params,
+               "json_data": json_data,
+            })    
             return {}  # or raise an appropriate exception
 
     async def __submit_get(self, url, params):
@@ -132,7 +140,7 @@ class LamAPI():
         # Convert boolean values to strings
         ngrams_str = 'true' if ngrams else 'false'
         fuzzy_str = 'true' if fuzzy else 'false'
-        types_str = ' '.join(types) if types else ''  # Provide default value if types is None
+        types_str = ' '.join(types) if types is not None else None
         ids_str = ' '.join(ids) if ids else ''  # Provide default value if ids is None
         
         params = {
@@ -140,10 +148,12 @@ class LamAPI():
             'name': string,
             'ngrams': ngrams_str,
             'fuzzy': fuzzy_str,
-            'types': types_str,
             'kg': self.kg,
             'limit': limit
         }
+        if types_str is not None:
+            params['types'] = types_str
+            
         result = await self.__submit_get(self._url.lookup_url(), params)
         if len(result) > 1:
             result = {"wikidata": result}
