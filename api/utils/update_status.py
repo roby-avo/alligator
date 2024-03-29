@@ -1,6 +1,7 @@
 import os
 import sys
 import time
+import traceback
 
 currentdir = os.path.dirname(os.path.realpath(__file__))
 parentdir = os.path.dirname(currentdir)
@@ -55,10 +56,9 @@ while True:
             id_job = row["_id"]["idJob"]
             status = row["status"]
             TODO, DOING, DONE = [status.get(key, 0) for key in ["TODO", "DOING", "DONE"]]
-            if DOING + DONE == 0:
-                continue
-            
-            status = "DOING"
+            status = "TODO"
+            if TODO + DOING > 0:
+                status = "DOING"
             if TODO + DOING == 0:
                 status = "DONE"
             table_c.update_one(
@@ -76,7 +76,7 @@ while True:
             ids_job_to_update[id_job]["DONE"] += DONE    
             
         
-
+        print("ids_job_to_update", ids_job_to_update)
         for id_job in ids_job_to_update:
             job = job_c.find_one({"_id": id_job})
             elapsed_time = round(time.time() - job["startTime"], 2)
@@ -84,15 +84,16 @@ while True:
             TODO, DOING, DONE = [ids_job_to_update[id_job].get(key, 0) for key in ["TODO", "DOING", "DONE"]]
             percent = round(DONE/(TODO+DOING+DONE), 2)
             missing_table = TODO + DOING
+            start_time_compuation = None
+            elapsed_time_computation = None
+            estimated_time = None    
 
             if DOING > 0 and job['startTimeComputation'] is None:
                 start_time_compuation = time.time()
-            else:
+            elif job['startTimeComputation'] is not None:
                 start_time_compuation = job['startTimeComputation']    
-            
-            elapsed_time_computation = round(time.time() - start_time_compuation, 2)
-
-            estimated_time = round(missing_table * elapsed_time_computation / DONE, 2) if DONE > 0 else None
+                elapsed_time_computation = round(time.time() - start_time_compuation, 2)
+                estimated_time = round(missing_table * elapsed_time_computation / DONE, 2) if DONE > 0 else None
 
             tables = table_c.aggregate([
                 { "$match": { "idJob": id_job } },  # Filter documents by idJob
@@ -131,7 +132,8 @@ while True:
             ])
             status = {result["_id"]:result["count"] for result in tables}
             TODO, DOING, DONE = [status.get(key, 0) for key in ["TODO", "DOING", "DONE"]]
-            percent = round(DONE/(TODO+DOING+DONE), 2)
+            print("dataset", dataset_name, "TODO", TODO, "DOING", DOING, "DONE", DONE, flush=True)
+            percent = round(DONE/(TODO+DOING+DONE), 2) if TODO+DOING+DONE > 0 else None
             process = "DOING" if TODO + DOING > 0 else "DONE"
             dataset_c.update_one({"datasetName": dataset_name}, {"$set": {
                 "status.TODO": TODO, 
@@ -142,4 +144,4 @@ while True:
             }})
         time.sleep(UPDATE_FREQUENCY)
     except Exception as e:
-        print(e)
+        print(e, traceback.format_exc())
