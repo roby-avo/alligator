@@ -79,16 +79,19 @@ while True:
     for id_job in ids_job_to_update:
         job = job_c.find_one({"_id": id_job})
         elapsed_time = round(time.time() - job["startTime"], 2)
-        if job['startTimeComputation'] is None:
+       
+        
+        TODO, DOING, DONE = [ids_job_to_update[id_job].get(key, 0) for key in ["TODO", "DOING", "DONE"]]
+        percent = round(DONE/(TODO+DOING+DONE), 2)
+        missing_table = TODO + DOING
+
+        if DOING > 0 and job['startTimeComputation'] is None: 
             start_time_compuation = time.time()
         else:
             start_time_compuation = job['startTimeComputation']    
         
         elapsed_time_computation = round(time.time() - start_time_compuation, 2)
         
-        TODO, DOING, DONE = [ids_job_to_update[id_job].get(key, 0) for key in ["TODO", "DOING", "DONE"]]
-        percent = round(DONE/(TODO+DOING+DONE), 2)
-        missing_table = TODO + DOING
         estimated_time = round(missing_table * elapsed_time_computation / DONE, 2) if DONE > 0 else None
 
         tables = table_c.aggregate([
