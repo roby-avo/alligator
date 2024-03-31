@@ -1,7 +1,10 @@
 import os
 import aiohttp
 import asyncio
+import traceback
 from wrapper.URLs import URLs
+from aiohttp_retry import RetryClient, ExponentialRetry
+
 
 headers = {
     'accept': 'application/json'
@@ -9,8 +12,9 @@ headers = {
 
 LAMAPI_TOKEN = os.environ["LAMAPI_TOKEN"]
 
+
 class LamAPI():
-    def __init__(self, LAMAPI_HOST, client_key, database, response_format="json", kg="wikidata", max_concurrent_requests=4) -> None:
+    def __init__(self, LAMAPI_HOST, client_key, database, response_format="json", kg="wikidata", max_concurrent_requests=50) -> None:
         self.format = response_format
         self.database = database
         base_url = LAMAPI_HOST
@@ -31,31 +35,48 @@ class LamAPI():
                 return result_json  # If none of the keys are found, return the original JSON data
             else:
                 raise Exception("Sorry, Invalid format!")
-        else:
-            # Handle non-JSON response here
-            error_type = "generic"
-            if response.status == 502:
-                error_type = "Bad Gateway"
-
-            self.database.get_collection("log").insert_one({
-               "type": error_type,
-               "url": url,
-               "params": params,
-               "json_data": json_data,
-            })    
-            return {}  # or raise an appropriate exception
+        
+        return {}
 
     async def __submit_get(self, url, params):
-        async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(ssl=False)) as session:
-            async with session.get(url, headers=headers, params=params) as response:
-                return await self.__to_format(response, url, params)
+        try:
+            retry_options = ExponentialRetry(attempts=3, start_timeout=3, max_timeout=10)
+            timeout = aiohttp.ClientTimeout(total=60)  # Adjusted timeout
+            async with self.semaphore:
+                async with RetryClient(connector=aiohttp.TCPConnector(ssl=False), retry_options=retry_options) as session:
+                    async with session.get(url, headers=headers, params=params, timeout=timeout) as response:
+                        return await self.__to_format(response, url, params)
+        except Exception as e:
+            self.__log_error("GET", url, params, str(e))
+            return {"error": str(e)}  # Return a structured error message.
 
     async def __submit_post(self, url, params, json_data):
-        async with self.semaphore:
-            async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(ssl=False)) as session:
-                async with session.post(url, headers=headers, params=params, json=json_data) as response:
-                    return await self.__to_format(response, url, params, json_data)
+        try:
+            retry_options = ExponentialRetry(attempts=3, start_timeout=3, max_timeout=10)
+            timeout = aiohttp.ClientTimeout(total=60)  # Adjusted timeout
+            async with self.semaphore:
+                async with RetryClient(connector=aiohttp.TCPConnector(ssl=False), retry_options=retry_options) as session:
+                    async with session.post(url, headers=headers, params=params, json=json_data, timeout=timeout) as response:
+                        return await self.__to_format(response, url, params, json_data)
+        except Exception as e:
+            self.__log_error("POST", url, params, str(e), json_data)
+            return {"error": str(e)}  # Return a structured error message.
 
+    def __log_error(self, method, url, params, error_message, json_data=None):
+        # Use a generic or specific error type based on the exception.
+        error_type = "timeout" if "TimeoutError" in error_message else "generic"
+        traceback_info = traceback.format_exc()
+
+        self.database.get_collection("log").insert_one({
+            "type": error_type,
+            "method": method,
+            "url": url,
+            "params": params,
+            "json_data": json_data,
+            "error_message": error_message,
+            "stack_trace": traceback_info,
+        })
+                
     async def literal_recognizer(self, column):
         json_data = {
             'json': column
