@@ -24,7 +24,7 @@ class LamAPI():
         # Initialize the semaphore with the max_concurrent_requests limit
         self.semaphore = asyncio.Semaphore(max_concurrent_requests)
 
-    async def __to_format(self, response, url, params, json_data=None):
+    async def __to_format(self, response):
         content_type = response.headers.get('Content-Type', '')
         if 'application/json' in content_type:
             if self.format == "json":
@@ -45,7 +45,7 @@ class LamAPI():
             async with self.semaphore:
                 async with RetryClient(connector=aiohttp.TCPConnector(ssl=False), retry_options=retry_options) as session:
                     async with session.get(url, headers=headers, params=params, timeout=timeout) as response:
-                        return await self.__to_format(response, url, params)
+                        return await self.__to_format(response)
         except Exception as e:
             self.__log_error("GET", url, params, str(e))
             return {"error": str(e)}  # Return a structured error message.
@@ -57,7 +57,7 @@ class LamAPI():
             async with self.semaphore:
                 async with RetryClient(connector=aiohttp.TCPConnector(ssl=False), retry_options=retry_options) as session:
                     async with session.post(url, headers=headers, params=params, json=json_data, timeout=timeout) as response:
-                        return await self.__to_format(response, url, params, json_data)
+                        return await self.__to_format(response)
         except Exception as e:
             self.__log_error("POST", url, params, str(e), json_data)
             return {"error": str(e)}  # Return a structured error message.
