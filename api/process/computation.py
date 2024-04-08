@@ -63,11 +63,12 @@ async def main():
     dataset_name = data["datasetName"]
     table_name = data["tableName"]
     page = data["page"]
+    header = data["header"]
 
     lamAPI = LamAPI(LAMAPI_HOST, LAMAPI_TOKEN, mongoDBWrapper, kg=kg_reference)
 
     obj_row_update = {"status": "DONE", "time": None}
-    dp = DataPreparation(rows_data, lamAPI)
+    dp = DataPreparation(header, rows_data, lamAPI)
     
     try:
         if len(column_metadata) == 0:

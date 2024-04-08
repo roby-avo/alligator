@@ -1,9 +1,10 @@
 # Import necessary packages and modules
 import os  # For interacting with the operating system
+import math  # For mathematical operations
 import traceback  # To provide details of exceptions
 import pandas as pd  # Popular data manipulation package
 import redis  # Redis database interface
-from flask import Flask, request  # Flask web framework components
+from flask import Flask, request, jsonify  # Flask web framework components
 from flask_cors import CORS  # To handle Cross-Origin Resource Sharing (CORS)
 from flask_restx import Api, Resource, fields, reqparse  # Extensions for Flask to ease REST API development
 from werkzeug.datastructures import FileStorage  # To handle file storage in Flask
@@ -581,12 +582,25 @@ class TableID(Resource):
         
         try:
             out = self._get_table(datasetName, tableName, page)
-            return out
+            out = self._replace_nan_with_none(out)  # Replace NaN with None in the output
+            return jsonify(out)
         except Exception as e:
             print({"traceback": traceback.format_exc()}, flush=True)
             return {"status": "Error", "message": str(e)}, 404
     
 
+    def _replace_nan_with_none(self, value):
+        """
+        Recursively replace NaN values with None in the given data structure.
+        """
+        if isinstance(value, float) and math.isnan(value):
+            return None
+        elif isinstance(value, dict):
+            return {k: self._replace_nan_with_none(v) for k, v in value.items()}
+        elif isinstance(value, list):
+            return [self._replace_nan_with_none(v) for v in value]
+        return value
+    
     def _get_table(self, dataset_name, table_name, page=None):
         query = {"datasetName": dataset_name, "tableName": table_name}
         if page is not None:
