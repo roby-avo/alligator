@@ -28,7 +28,8 @@ class DatasetModel:
                         "DONE": 0
                     },
                     "%": 0,
-                    "page": page
+                    "page": page,
+                    "process": "TODO"
                 })
             else:
                 TODO = result["status"]["TODO"] + n_tables

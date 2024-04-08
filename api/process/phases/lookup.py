@@ -1,3 +1,4 @@
+import asyncio
 import traceback
 from model.row import Row
 
@@ -13,14 +14,19 @@ class Lookup:
         self._log_c = log_c
         self._kg_ref = kg_ref
         self._limit = limit
+        self._rows_data = data["rows"]
         self._rows = []
         self._cache = {}
-        for row in data["rows"]:
-            row = self._build_row(row["data"], row["idRow"])
+       
+    async def generate_candidates(self):
+        tasks = []
+        for row in self._rows_data:
+            tasks.append(asyncio.create_task(self._build_row(row["data"], row["idRow"])))
+        results = await asyncio.gather(*tasks)
+        for row in results:
             self._rows.append(row)
 
-
-    def _build_row(self, cells, id_row):
+    async def _build_row(self, cells, id_row):
         row = Row(id_row, len(cells))
         cells_as_strings = [str(cell) for cell in cells]
         row_text = " ".join(cells_as_strings)
@@ -32,7 +38,7 @@ class Lookup:
                 if cell in self._cache:
                     candidates = self._cache.get(cell, [])
                 else:
-                    candidates = self._get_candidates(cell, id_row, types)
+                    candidates = await self._get_candidates(cell, id_row, types)
                     self._cache[cell] = candidates
                 
                 is_subject = i == self._target["SUBJ"]
@@ -44,12 +50,12 @@ class Lookup:
         return row
 
     
-    def _get_candidates(self, cell, id_row, types):
+    async def _get_candidates(self, cell, id_row, types):
         candidates = []
         result = None
         try:
             if len(str(cell)) > 0 and str(cell).lower() != "nan":
-                result = self._lamAPI.lookup(cell, limit=100)
+                result = await self._lamAPI.lookup(cell, limit=100)
                 if cell not in result:
                     raise Exception("Error from lamAPI")
                 candidates = result[cell]    
