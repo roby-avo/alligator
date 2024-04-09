@@ -13,26 +13,6 @@ class FeauturesExtraction:
         self._entity_to_predicates_obj = {}
         self._entity_to_predicates_lit = {}
         
-
-    # async def compute_feautures(self):
-    #     for row in self._rows:
-    #         ne_cells = row.get_ne_cells()
-    #         lit_cells = row.get_lit_cells()
-    #         cells = row.get_cells()
-    #         tasks = []
-    #         for ne_cell in ne_cells:
-    #             for cell in cells:
-    #                 if cell == ne_cell:
-    #                     continue
-    #                 elif cell.is_lit_cell:
-    #                     tasks.append(asyncio.create_task(self._match_lit_cells(ne_cell, cell, row, len(lit_cells))))
-    #                     #self._match_lit_cells(ne_cell, cell, row, len(lit_cells))
-    #                 else:
-    #                     tasks.append(asyncio.create_task(self._compute_similarity_between_ne_cells(ne_cell, cell, len(ne_cells))))
-    #                     #self._compute_similarity_between_ne_cells(ne_cell, cell, len(ne_cells))
-    #         await asyncio.gather(*tasks)    
-    #     return self._extract_features()
-        
     async def compute_feautures(self):
         tasks = []
         for row in self._rows:

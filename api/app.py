@@ -40,6 +40,7 @@ job_active = redis.Redis(host=REDIS_ENDPOINT, db=REDIS_JOB_DB)
 # Initialize MongoDB wrapper and get collections for different data models
 mongoDBWrapper = MongoDBWrapper()
 row_c = mongoDBWrapper.get_collection("row")
+cea_prelinking_c = mongoDBWrapper.get_collection("ceaPrelinking")
 candidate_scored_c = mongoDBWrapper.get_collection("candidateScored")
 cea_c = mongoDBWrapper.get_collection("cea")
 cpa_c = mongoDBWrapper.get_collection("cpa")
@@ -715,6 +716,7 @@ class TableID(Resource):
         query = {"datasetName": dataset_name, "tableName": table_name}
         row_c.delete_many(query)
         table_c.delete_one(query)
+        cea_prelinking_c.delete_many(query)
         cea_c.delete_many(query)
         cta_c.delete_many(query)
         cpa_c.delete_many(query)
