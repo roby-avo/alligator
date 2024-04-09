@@ -10,6 +10,8 @@ class FeauturesExtraction:
         self._cache_lit = {}
         self._lock_obj = asyncio.Lock()  # Lock for cache_obj
         self._lock_lit = asyncio.Lock()  # Lock for cache_lit
+        self._entity_to_predicates_obj = {}
+        self._entity_to_predicates_lit = {}
         
 
     # async def compute_feautures(self):
@@ -84,7 +86,12 @@ class FeauturesExtraction:
                         self._cache_obj[id_subject] = subj_candidates_objects
                     else:    
                         subj_candidates_objects = self._cache_obj.get(id_subject, {})
-                        
+                    
+                    if id_subject not in self._entity_to_predicates_obj:
+                        predicates = subj_candidates_objects.values()
+                        subj_predicates = set([predicate for predicates_list in predicates for predicate in predicates_list])
+                        self._entity_to_predicates_obj[id_subject] = subj_predicates
+
                 objects_set = set(subj_candidates_objects.keys())
                 obj_score_max = 0
                 objects_itersection = objects_set.intersection(set([candidate["id"] for candidate in obj_cell.candidates()]))
@@ -166,6 +173,11 @@ class FeauturesExtraction:
                     else:   
                         subj_literals = self._cache_lit.get(id_subject, {})
                     
+                    if id_subject not in self._entity_to_predicates_lit:
+                        subj_predicates = subj_predicates = [p for p_dict in subj_literals.values() for p in p_dict.keys()]
+                        self._entity_to_predicates_lit[id_subject] = subj_predicates
+                    
+
                 lit_string = self._get_literal_values_string(subj_literals)
                 row_text_all = utils.clean_str(row.get_text())
                 row_text_lit = utils.clean_str(row.get_text({"LIT"}))

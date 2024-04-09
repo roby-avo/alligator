@@ -8,7 +8,7 @@ from flask import Flask, request, jsonify  # Flask web framework components
 from flask_cors import CORS  # To handle Cross-Origin Resource Sharing (CORS)
 from flask_restx import Api, Resource, fields, reqparse  # Extensions for Flask to ease REST API development
 from werkzeug.datastructures import FileStorage  # To handle file storage in Flask
-
+import json  # For JSON data manipulation
 
 import tensorflow as tf
 import logging
@@ -583,7 +583,7 @@ class TableID(Resource):
         try:
             out = self._get_table(datasetName, tableName, page)
             out = self._replace_nan_with_none(out)  # Replace NaN with None in the output
-            return jsonify(out)
+            return out
         except Exception as e:
             print({"traceback": traceback.format_exc()}, flush=True)
             return {"status": "Error", "message": str(e)}, 404
