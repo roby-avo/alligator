@@ -104,7 +104,7 @@ async def main():
         cea_preliking_data = utils.get_cea_pre_linking_data(metadata, rows)
         revision = FeaturesExtractionRevision(rows, features_extraction._entity_to_predicates_obj, features_extraction._entity_to_predicates_lit)
         features = revision.compute_features()
-        Prediction(rows, features, rn_model).compute_prediction("rho'")
+        Prediction(rows, features, rn_model).compute_prediction("rho'", deteministic=True)
         storage = Decision(metadata, cea_preliking_data, rows, revision._cta, revision._cpa_pair, collections)
         storage.store_data()
         end = time.time()

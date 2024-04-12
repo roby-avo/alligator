@@ -26,7 +26,7 @@ class FeauturesExtraction:
         return self._extract_features()
 
     async def _compute_rows(self, ne_cells, lit_cells, cells, row):
-        tasks = []
+        #tasks = []
         for ne_cell in ne_cells:
             for cell in cells:
                 if cell == ne_cell:

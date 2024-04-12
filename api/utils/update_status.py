@@ -56,10 +56,11 @@ while True:
             id_job = row["_id"]["idJob"]
             status = row["status"]
             TODO, DOING, DONE = [status.get(key, 0) for key in ["TODO", "DOING", "DONE"]]
-            status = "TODO"
-            if TODO + DOING > 0:
+            if TODO > 0:
+                status = "TODO"
+            elif DOING > 0:
                 status = "DOING"
-            if TODO + DOING == 0:
+            elif TODO + DOING == 0:
                 status = "DONE"
             table_c.update_one(
                 {"datasetName": dataset_name, "tableName": table_name}, 

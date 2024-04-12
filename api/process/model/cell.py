@@ -50,7 +50,12 @@ class Cell:
                 "cpa_t2": 0,
                 "cpa_t3": 0,
                 "cpa_t4": 0,
-                "cpa_t5": 0
+                "cpa_t5": 0,
+                "cpa_r1": 0,
+                "cpa_r2": 0,
+                "cpa_r3": 0,
+                "cpa_r4": 0,
+                "cpa_r5": 0
             }
 
            

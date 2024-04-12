@@ -41,7 +41,7 @@ class Decision:
             for cell in row.get_cells():
                 candidates = cell.candidates()
                 wc = []
-                rank = candidates[0:20] if len(candidates) > 0 else []
+                rank = candidates[0:30] if len(candidates) > 0 else []
                 if len(candidates) > 0:
                     if len(candidates) > 1:
                         candidates[0]["delta"] = round(candidates[0]["rho'"] - candidates[1]["rho'"], 3)
@@ -50,7 +50,7 @@ class Decision:
                     candidates[0]["score"] = round((1-K) * candidates[0]["rho'"] + K * candidates[0]["delta"], 3)
                     wc.append(candidates[0])
                 
-                if len(wc) == 1:
+                if len(wc) > 0:
                     cea[str(cell._id_col)] = wc[0]["id"]
                     if wc[0]["score"] > SIGMA:
                         wc[0]["match"] = True

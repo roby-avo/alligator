@@ -29,7 +29,12 @@ all_features = [
     "cpa_t2",
     "cpa_t3",
     "cpa_t4",
-    "cpa_t5"
+    "cpa_t5",
+    "cpa_r1",
+    "cpa_r2",
+    "cpa_r3",
+    "cpa_r4",
+    "cpa_r5"
 ]
 
 features_to_use = {
