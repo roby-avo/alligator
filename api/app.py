@@ -349,7 +349,6 @@ class Dataset(Resource):
     },
     params={ 
         "datasetName": {"description": "The name of the dataset to retrieve.", "type": "string"},
-        "page": {"description": "Page number for pagination. Each page returns a subset of the dataset.", "type": "integer"},
         "token": {"description": "API key token for authentication.", "type": "string"}
     }
 )
@@ -359,7 +358,6 @@ class DatasetID(Resource):
             Retrieves dataset information based on the dataset name and page number.
             Parameters:
                 datasetName (str): The name of the dataset to be retrieved.
-                page (int): Optional. The page number for pagination of results.
                 token (str): API token for authentication.
             Returns:
                 List[Dict]: A list of dictionaries containing dataset information.
@@ -367,24 +365,22 @@ class DatasetID(Resource):
         """
         parser = reqparse.RequestParser()
         parser.add_argument("token", type=str, help="variable 1", location="args")
-        parser.add_argument("page", type=int, help="variable 2", location="args")
         args = parser.parse_args()
         token = args["token"]
         dataset_name = datasetName
-        page = args["page"]
 
         if not validate_token(token):
             return {"Error": "Invalid Token"}, 403
 
-        if page is None or len(page) == 0:
-            page = 1
-        
+
         try:    
-            results = table_c.find({"datasetName": dataset_name, "page": page})
+            results = dataset_c.find({"datasetName": dataset_name})
             out = [
                 {
-                    "tableName": result["tableName"],
-                    "status": result["status"]
+                    "datasetName": result["datasetName"],
+                    "Ntables": result["Ntables"],
+                    "%": result["%"],
+                    "status": result["process"]
                 }
                 for result in results
             ]
@@ -447,7 +443,11 @@ class DatasetTable(Resource):
     @ds.expect(upload_parser)
     @ds.doc(
         params={ 
-            "kgReference": {"description": "Source Knowledge Graph (KG) of reference for the annotation process. Default is 'wikidata'.", "type": "string"}
+            "kgReference": {
+                "description": "Source Knowledge Graph (KG) of reference for the annotation process. Choice is 'wikidata'",
+                "type": "string",
+                "enum": ["wikidata"]  # Replace with your actual KG references
+            }
         }
     )
     def post(self, datasetName):
@@ -495,6 +495,11 @@ class DatasetTable(Resource):
         
         return {"status": "Ok", "tables": out}, 202
     
+    @ds.doc(
+        params={ 
+            "page": {"description": "Source Knowledge Graph (KG) of reference for the annotation process. Default is 'wikidata'.", "type": "string"}
+        }
+    )
     def get(self, datasetName, page=None):
         """
             Handles the retrieval of information about tables within a specified dataset.
@@ -547,11 +552,20 @@ class DatasetTable(Resource):
         403: "Forbidden - Access denied due to invalid token."
     },
     params={ 
-        "page": {"description": "The page number for pagination of table data. Defaults to returning all pages if not specified.", "type": "integer"},
         "token": {"description": "API key token for authentication.", "type": "string"}
     }
 )
 class TableID(Resource):
+    @ds.doc(
+        params={
+            "page": {
+                "description": "The page number for pagination of table data. Defaults to returning all pages if not specified.",
+                "type": "int",
+                "default": 1
+            }
+        },
+        description="Retrieve results with pagination. Each page contains a subset of results."
+    )
     def get(self, datasetName, tableName):
         """
             Retrieves a specific table from a dataset based on the dataset and table names.
