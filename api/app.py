@@ -170,7 +170,7 @@ db_path = './GeoLite2-City.mmdb'
 
 # Check if the GeoLite2 database exists
 if not os.path.exists(db_path):
-    app.logger.error("GeoLite2 database file does not exist. Please download from MaxMind.")
+    app.logger.error("GeoLite2 database file does not exist.")
     # Here, you could exit the application or disable geolocation features.
     # For this example, let's assume we disable it and continue running.
     geolocation_enabled = False
@@ -215,7 +215,7 @@ def log_ip_and_increment_count():
 limiter = Limiter(
     app=app,
     key_func=log_ip_and_increment_count,  # Use custom function to retrieve IP and log it
-    default_limits=["1 per day"]
+    default_limits=["1000 per day"]
 )
 
 
