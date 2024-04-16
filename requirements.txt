@@ -12,3 +12,4 @@ scikit-learn==1.4.1.post1
 tensorflow==2.16.1
 aiohttp==3.9.3
 aiohttp_retry==2.8.3
+Flask-Limiter==3.5.1

@@ -9,6 +9,9 @@ from flask_cors import CORS  # To handle Cross-Origin Resource Sharing (CORS)
 from flask_restx import Api, Resource, fields, reqparse  # Extensions for Flask to ease REST API development
 from werkzeug.datastructures import FileStorage  # To handle file storage in Flask
 import json  # For JSON data manipulation
+import datetime  # For date and time operations
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 import tensorflow as tf
 import logging
@@ -47,6 +50,7 @@ cpa_c = mongoDBWrapper.get_collection("cpa")
 cta_c = mongoDBWrapper.get_collection("cta")
 dataset_c = mongoDBWrapper.get_collection("dataset")
 table_c = mongoDBWrapper.get_collection("table")
+rate_limit_c = mongoDBWrapper.get_collection("rateLimit")
 
 # Initialize Flask application and enable CORS
 app = Flask(__name__)
@@ -156,6 +160,15 @@ table_list_field = api.model("TablesList",  {
     }),
     "kgReference": fields.String(required=True, example="wikidata")
 })
+
+
+# Initialize Flask-Limiter
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    default_limits=["1 per day", "50 per hour"]
+)
+
 
 
 

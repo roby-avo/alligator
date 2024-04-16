@@ -22,12 +22,8 @@ from wrapper.Database import MongoDBWrapper  # MongoDB database wrapper
 async def main():
     start = time.time()
 
-    pn_neural_path = "./process/ml_models/Linker1.0_PN.h5"
-    rn_neural_path = "./process/ml_models/Linker1.0_RN.h5"
-
-    pn_model = load_model(pn_neural_path)    
-    rn_model = load_model(rn_neural_path)    
-
+    neural_network_path = "./process/ml_models/Linker_RN_ALL.h5"
+    nn_model = load_model(neural_network_path)    
 
     REDIS_ENDPOINT = os.environ["REDIS_ENDPOINT"]
     REDIS_JOB_DB = int(os.environ["REDIS_JOB_DB"])
@@ -100,11 +96,11 @@ async def main():
         rows = l.get_rows()
         features_extraction = FeauturesExtraction(rows, lamAPI)
         features = await features_extraction.compute_feautures()
-        Prediction(rows, features, pn_model).compute_prediction("rho", deteministic=True)
+        Prediction(rows, features).compute_prediction("rho")
         cea_preliking_data = utils.get_cea_pre_linking_data(metadata, rows)
         revision = FeaturesExtractionRevision(rows, features_extraction._entity_to_predicates_obj, features_extraction._entity_to_predicates_lit)
         features = revision.compute_features()
-        Prediction(rows, features, rn_model).compute_prediction("rho'", deteministic=True)
+        Prediction(rows, features, nn_model).compute_prediction("rho'")
         storage = Decision(metadata, cea_preliking_data, rows, revision._cta, revision._cpa_pair, collections)
         storage.store_data()
         end = time.time()

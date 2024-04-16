@@ -46,18 +46,18 @@ features_to_use = {
 }
 
 class Prediction:
-    def __init__(self, rows, feautures, model):
+    def __init__(self, rows, feautures, model=None):
         self._rows = rows
         self._model = model
         self._features = feautures
         
-    def compute_prediction(self, feature_name, deteministic=False):
+    def compute_prediction(self, feature_name):
         prediction = []
         indexes = []
         for column_features in self._features:
             pred = [] 
             if len(column_features) > 0:
-                if deteministic:
+                if self._model is None:
                     for features in column_features:
                         score = sum([v for i, v in enumerate(features) if all_features[i] in features_to_use]) / len(features_to_use)
                         pred.append([0, score])
