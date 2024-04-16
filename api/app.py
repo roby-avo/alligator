@@ -70,9 +70,13 @@ upload_parser = api.parser()
 upload_parser.add_argument("file", location="files",
                            type=FileStorage, required=True)
 
+ALLIGATOR_TOKEN_SECRET = os.environ["ALLIGATOR_TOKEN_SECRET"]
 # Define a function to validate the provided token against the expected API token
-def validate_token(token):
+def validate_token(token, bypass=False):
+    if bypass:
+        return token == ALLIGATOR_TOKEN_SECRET
     return token == API_TOKEN
+
 
 # Define data models for the API to serialize and deserialize data
 rows_fields = api.model("Rows", {
@@ -176,6 +180,11 @@ else:
 
 
 def log_ip_and_increment_count():
+    token = request.args.get('token')
+    if token and validate_token(token, bypass=True):
+        print("Bypassing rate limiting for special token", flush=True)
+        return None  # Bypass rate limiting for special token
+
     ip_address = get_remote_address()
     today_date = datetime.date.today()
     
@@ -206,7 +215,7 @@ def log_ip_and_increment_count():
 limiter = Limiter(
     app=app,
     key_func=log_ip_and_increment_count,  # Use custom function to retrieve IP and log it
-    default_limits=["1000 per day"]
+    default_limits=["1 per day"]
 )
 
 
@@ -239,7 +248,7 @@ class CreateWithArray(Resource):
         parser.add_argument("token", type=str, help="variable 1", location="args")
         args = parser.parse_args()
         token = args["token"]
-        if not validate_token(token):
+        if not validate_token(token) and not validate_token(token, bypass=True):
             return {"Error": "Invalid Token"}, 403
         
         out = []
@@ -314,6 +323,11 @@ class Dataset(Resource):
         parser.add_argument("page", type=str, help="variable 2", location="args")
         args = parser.parse_args()
         token = args["token"]
+
+        
+        if not validate_token(token) and not validate_token(token, bypass=True):
+            return {"Error": "Invalid Token"}, 403
+    
         page = args["page"]
         if page is None:
             page = 1
@@ -321,9 +335,7 @@ class Dataset(Resource):
             page = int(page)
         else:
             return {"Error": "Invalid Number of Page"}, 403        
-        if not validate_token(token):
-            return {"Error": "Invalid Token"}, 403
-        
+       
         try:
             results = dataset_c.find({"page": page})
             out = [
@@ -370,7 +382,7 @@ class Dataset(Resource):
         token = args["token"]
         dataset_name = args["datasetName"]
 
-        if not validate_token(token):
+        if not validate_token(token) and not validate_token(token, bypass=True):
             return {"Error": "Invalid Token"}, 403
         
         data = {
@@ -421,7 +433,7 @@ class DatasetID(Resource):
         token = args["token"]
         dataset_name = datasetName
 
-        if not validate_token(token):
+        if not validate_token(token) and not validate_token(token, bypass=True):
             return {"Error": "Invalid Token"}, 403
 
 
@@ -457,7 +469,7 @@ class DatasetID(Resource):
         dataset_name = datasetName
         args = parser.parse_args()
         token = args["token"]
-        if not validate_token(token):
+        if not validate_token(token) and not validate_token(token, bypass=True):
             return {"Error": "Invalid Token"}, 403
         try:
             self._delete_dataset(dataset_name)
@@ -520,7 +532,7 @@ class DatasetTable(Resource):
         if args["kgReference"] is not None:
             kg_reference = args["kgReference"]
         token = args["token"]
-        if not validate_token(token):
+        if not validate_token(token) and not validate_token(token, bypass=True):
             return {"Error": "Invalid Token"}, 403
         
 
@@ -569,7 +581,7 @@ class DatasetTable(Resource):
         page = args["page"]
         token = args["token"]
 
-        if not validate_token(token):
+        if not validate_token(token) and not validate_token(token, bypass=True):
             return {"Error": "Invalid Token"}, 403
         
         if page is None:
@@ -637,7 +649,7 @@ class TableID(Resource):
         token = args["token"]
         
        
-        if not validate_token(token):
+        if not validate_token(token) and not validate_token(token, bypass=True):
             return {"Error": "Invalid Token"}, 403
 
         # if page isn't specified, return all pages
@@ -767,7 +779,7 @@ class TableID(Resource):
         args = parser.parse_args()
         token = args["token"]
        
-        if not validate_token(token):
+        if not validate_token(token) and not validate_token(token, bypass=True):
             return {"Error": "Invalid Token"}, 403
 
         try:
