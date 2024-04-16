@@ -166,7 +166,7 @@ table_list_field = api.model("TablesList",  {
 limiter = Limiter(
     get_remote_address,
     app=app,
-    default_limits=["1 per day", "50 per hour"]
+    default_limits=["1000 per day", "50 per hour"]
 )
 
 
