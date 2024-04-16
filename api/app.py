@@ -12,8 +12,7 @@ import json  # For JSON data manipulation
 import datetime  # For date and time operations
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
-
-import tensorflow as tf
+import geoip2.database
 import logging
 
 # Disable TensorFlow warnings
@@ -50,7 +49,7 @@ cpa_c = mongoDBWrapper.get_collection("cpa")
 cta_c = mongoDBWrapper.get_collection("cta")
 dataset_c = mongoDBWrapper.get_collection("dataset")
 table_c = mongoDBWrapper.get_collection("table")
-rate_limit_c = mongoDBWrapper.get_collection("rateLimit")
+ip_logs_c = mongoDBWrapper.get_collection("ipLogs")
 
 # Initialize Flask application and enable CORS
 app = Flask(__name__)
@@ -162,13 +161,53 @@ table_list_field = api.model("TablesList",  {
 })
 
 
+# Path to GeoLite2 database
+db_path = './GeoLite2-City.mmdb'
+
+# Check if the GeoLite2 database exists
+if not os.path.exists(db_path):
+    app.logger.error("GeoLite2 database file does not exist. Please download from MaxMind.")
+    # Here, you could exit the application or disable geolocation features.
+    # For this example, let's assume we disable it and continue running.
+    geolocation_enabled = False
+else:
+    reader = geoip2.database.Reader(db_path)  # Load the database
+    geolocation_enabled = True
+
+
+def log_ip_and_increment_count():
+    ip_address = get_remote_address()
+    today_date = datetime.date.today()
+    
+    geolocation = {}
+    if geolocation_enabled:
+        try:
+            response = reader.city(ip_address)
+            geolocation = {
+                "city": response.city.name,
+                "region": response.subdivisions.most_specific.name,
+                "country": response.country.name,
+                "latitude": response.location.latitude,
+                "longitude": response.location.longitude
+            }
+        except geoip2.errors.AddressNotFoundError:
+            geolocation = {"error": "IP address not found in database"}
+
+    # Update or insert a new document with the current date and IP address
+    ip_logs_c.update_one(
+        {"ip_address": ip_address, "date": str(today_date)},
+        {"$inc": {"count": 1}, "$set": {"geolocation": geolocation}},
+        upsert=True
+    )
+    return ip_address
+
+
 # Initialize Flask-Limiter
 limiter = Limiter(
-    get_remote_address,
     app=app,
-    default_limits=["1000 per day", "50 per hour"]
+    key_func=log_ip_and_increment_count,  # Use custom function to retrieve IP and log it
+    default_limits=["1000 per day"]
 )
-
 
 
 

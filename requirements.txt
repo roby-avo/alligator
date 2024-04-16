@@ -13,3 +13,4 @@ tensorflow==2.16.1
 aiohttp==3.9.3
 aiohttp_retry==2.8.3
 Flask-Limiter==3.5.1
+geoip2==4.8.0

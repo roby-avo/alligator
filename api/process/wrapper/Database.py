@@ -45,6 +45,10 @@ class MongoDBWrapper:
         c.create_index([('datasetName', 1), ('tableName', 1)], unique=True)
         c.create_index([('idJob', 1)])
 
+        c = self.get_collection('ipLogs')
+        c.create_index([("ip_address", 1), ("date", 1)])
+
+
     def get_collection(self, collection_name):
         """
         Access the specified collection.
