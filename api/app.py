@@ -186,8 +186,13 @@ def log_ip_and_increment_count():
     if token and validate_token(token, bypass=True) or path in swagger_endpoints:
         print("Bypassing rate limiting for special token", flush=True)
         return None  # Bypass rate limiting for special token
+    
+    # Use the X-Forwarded-For header if it exists to get the original client IP
+    if 'X-Forwarded-For' in request.headers:
+        ip_address = request.headers['X-Forwarded-For'].split(',')[0]  # Get the first IP in the list
+    else:
+        ip_address = get_remote_address()  # Fallback to the direct connection IP
 
-    ip_address = get_remote_address()
     today_date = datetime.date.today()
     
     geolocation = {}
@@ -211,6 +216,7 @@ def log_ip_and_increment_count():
         upsert=True
     )
     return ip_address
+
 
 
 # Initialize Flask-Limiter
