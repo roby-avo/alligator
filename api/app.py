@@ -181,7 +181,9 @@ else:
 
 def log_ip_and_increment_count():
     token = request.args.get('token')
-    if token and validate_token(token, bypass=True):
+    path = request.path
+    swagger_endpoints = ['/', '/swagger.json']
+    if token and validate_token(token, bypass=True) or path in swagger_endpoints:
         print("Bypassing rate limiting for special token", flush=True)
         return None  # Bypass rate limiting for special token
 
@@ -215,7 +217,7 @@ def log_ip_and_increment_count():
 limiter = Limiter(
     app=app,
     key_func=log_ip_and_increment_count,  # Use custom function to retrieve IP and log it
-    default_limits=["1000 per day"]
+    default_limits=["1 per day"]
 )
 
 
