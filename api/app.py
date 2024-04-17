@@ -217,7 +217,7 @@ def log_ip_and_increment_count():
 limiter = Limiter(
     app=app,
     key_func=log_ip_and_increment_count,  # Use custom function to retrieve IP and log it
-    default_limits=["1 per day"]
+    default_limits=["10 per day"]
 )
 
 
