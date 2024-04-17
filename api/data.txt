@@ -3,4 +3,4 @@
 
 This robust system interfaces with <a href='https://www.wikidata.org/'>Wikidata</a> to enrich tables by associating their elements with semantically linked entities. Our API provides a streamlined, programmable access to this capability, enabling users to integrate sophisticated entity resolution features into their applications.
 
-To explore the API's functionalities, utilize the token: <code>alligator_demo_2023</code> during your requests.
+To explore the API's functionalities, utilize the token: <code>alligator_demo_2023</code> (1000 requests per day) during your requests.
