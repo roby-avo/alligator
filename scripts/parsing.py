@@ -90,8 +90,14 @@ def generate_api_format(id_dataset, tables_path, cell_to_entity, NE_cols, minimu
             id_row = int(id_row)
             id_row -= 1
         new_key = f"{name} {id_row} {id_col}"
-        candidates_to_be_covered[key_to_cell[new_key]] = cell_to_entity[key]
-        
+        cell = key_to_cell[new_key]
+        if cell not in candidates_to_be_covered:
+            candidates_to_be_covered[cell] = set()
+        candidates_to_be_covered.add(clean_str(cell_to_entity[key]))
+    
+    for cell in candidates_to_be_covered:
+        candidates_to_be_covered[cell] = list(candidates_to_be_covered[cell])
+
     return buffer, candidates_to_be_covered
 
 
@@ -134,6 +140,18 @@ datasets = {
         "cta": "/data/my-data/Dataset/HardTablesR3/gt/cta.csv"
     }
 }
-tables_path, cea_target_path, cpa_target_path, cta_target_path = list(datasets["2T-2020"].values())
-cell_to_entity, NE_cols, minimum_row_is_zero = cea_process(cea_target_path)
-buffer, candidates_to_be_covered = generate_api_format(tables_path, cell_to_entity, NE_cols, minimum_row_is_zero)
+
+
+global_candidates_to_be_covered = {}
+for dataset in datasets:
+    tables_path, cea_target_path, cpa_target_path, cta_target_path = list(datasets[dataset].values())
+    cell_to_entity, NE_cols, minimum_row_is_zero = cea_process(cea_target_path)
+    buffer, candidates_to_be_covered = generate_api_format(dataset, tables_path, cell_to_entity, NE_cols, minimum_row_is_zero)
+    for cell in candidates_to_be_covered:
+        if cell not in global_candidates_to_be_covered:
+            global_candidates_to_be_covered[cell] = set()
+        global_candidates_to_be_covered[cell].update(candidates_to_be_covered[cell])
+
+
+for cell in global_candidates_to_be_covered:
+    global_candidates_to_be_covered[cell] = list(global_candidates_to_be_covered[cell])
