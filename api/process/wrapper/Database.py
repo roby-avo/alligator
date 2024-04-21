@@ -49,6 +49,15 @@ class MongoDBWrapper:
         c.create_index([("ip_address", 1), ("date", 1)])
 
 
+    def get_client(self):
+        """
+        Access the MongoDB client.
+
+        :return: MongoDB client.
+        """
+        return self.client
+
+
     def get_collection(self, collection_name):
         """
         Access the specified collection.
