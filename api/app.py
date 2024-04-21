@@ -597,7 +597,7 @@ class DatasetTable(Resource):
 
         try:
             query = {"datasetName": datasetName, "page": int(page)}
-            results = row_c.find(query)
+            results = table_c.find(query)
             out = []
             for result in results:
                 out.append({

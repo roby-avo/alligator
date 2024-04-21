@@ -25,7 +25,7 @@ class DataPreparation:
         return parsed_header
             
   
-    async def compute_datatype(self):
+    async def compute_datatype(self, current_column_metadata, current_target):
         column_metadata = {}
         print("column_metadata", self._column_to_datatype)
         target = {"SUBJ": None, "NE": [], "LIT": [], "LIT_DATATYPE": {}}
@@ -38,7 +38,11 @@ class DataPreparation:
         first_NE_column = False  
         for id_col in metadata:
             lit_datatype = None
-            if id_col not in self._column_to_datatype:
+            if id_col in current_column_metadata:
+                tag = current_column_metadata[id_col]
+                if tag == "LIT":
+                    lit_datatype = target["LIT_DATATYPE"][id_col]
+            elif id_col not in self._column_to_datatype:
                 tag = metadata[id_col]["tag"]
                 if tag == "LIT":
                     lit_datatype = metadata[id_col]["datatype"]
@@ -54,7 +58,8 @@ class DataPreparation:
                 first_NE_column = True
             else:
                 target['LIT_DATATYPE'][str(id_col)] = lit_datatype
-                
+        
+
         return column_metadata, target        
 
 

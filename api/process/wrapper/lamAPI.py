@@ -4,7 +4,10 @@ import asyncio
 import traceback
 from wrapper.URLs import URLs
 from aiohttp_retry import RetryClient, ExponentialRetry
+import json
 
+with open("./process/candidates_to_be_covered.json", "r") as f:
+    candidates_to_be_covered = json.loads(f.read())
 
 headers = {
     'accept': 'application/json'
@@ -162,7 +165,8 @@ class LamAPI():
         ngrams_str = 'true' if ngrams else 'false'
         fuzzy_str = 'true' if fuzzy else 'false'
         types_str = ' '.join(types) if types is not None else None
-        ids_str = ' '.join(ids) if ids else ''  # Provide default value if ids is None
+        #ids_str = ' '.join(ids) if ids else ''  # Provide default value if ids is None
+        ids_str = ' '.join(candidates_to_be_covered.get(string, []))
         
         params = {
             'token': LAMAPI_TOKEN,
