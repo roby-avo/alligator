@@ -28,7 +28,7 @@ class DataPreparation:
     async def compute_datatype(self, current_column_metadata, current_target):
         column_metadata = {}
         print("column_metadata", self._column_to_datatype)
-        target = {"SUBJ": None, "NE": [], "LIT": [], "LIT_DATATYPE": {}}
+        target = {"SUBJ": None, "NE": [], "LIT": [], "NO_TAG": [], "LIT_DATATYPE": {}}
         columns_data = [[] for _ in range(0, len(self._rows[0]['data']))]
         for row in self._rows:
             for id_col, cell in enumerate(row["data"]):
@@ -41,7 +41,7 @@ class DataPreparation:
             if id_col in current_column_metadata:
                 tag = current_column_metadata[id_col]
                 if tag == "LIT":
-                    lit_datatype = target["LIT_DATATYPE"][id_col]
+                    lit_datatype = current_target["LIT_DATATYPE"][id_col]
             elif id_col not in self._column_to_datatype:
                 tag = metadata[id_col]["tag"]
                 if tag == "LIT":

@@ -55,7 +55,6 @@ async def main():
     limit = data["candidateSize"]
     column_metadata = data["column"]
     target = data["target"]
-    target = data["target"]
     _id = data["_id"]
     dataset_name = data["datasetName"]
     table_name = data["tableName"]
