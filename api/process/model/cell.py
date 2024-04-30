@@ -4,7 +4,7 @@ import utils.utils as utils
 
 class Cell:
     def __init__(self, content: str, row_content:str, candidates: list, id_col: int, n_cols: int, is_lit_cell=False, is_notag_cell=False, datatype=None):
-        self.content = utils.clean_str(str(content))
+        self.content = content
         self._id_col = id_col
         self.is_lit_cell = is_lit_cell
         self.is_notag_cell = is_notag_cell
