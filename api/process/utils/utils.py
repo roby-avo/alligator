@@ -1,10 +1,17 @@
 from dateutil.parser import parse
 import re
 
-def clean_str(s):
-    s = s.lower()
-    s = re.sub("[\(\[].*?[\)\]]", "", s).strip()
-    return " ".join(s.split())
+def clean_str(value):
+    value = str(value).lower()
+    # Remove content inside parentheses and brackets
+    value = re.sub(r"[\(\[].*?[\)\]]", "", value)
+    # Remove specific unwanted characters
+    stop_characters = ["_"]
+    for char in stop_characters:
+        value = value.replace(char, " ")
+    # Remove extra spaces and strip leading/trailing spaces
+    value = " ".join(value.split())
+    return value
 
 
 def word2ngrams(text, n=None):

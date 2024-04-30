@@ -1,4 +1,4 @@
-
+import utils.utils as utils
 
 class DataPreparation:
     def __init__(self, header, rows, lamAPI):
@@ -52,6 +52,8 @@ class DataPreparation:
             
             column_metadata[id_col] = tag    
             target[tag].append(int(id_col)) 
+            if tag == "SUBJ": # you just need it for degugging if you re-run stuff!
+                tag = "NE"
             if tag == "NE":
                 if not first_NE_column:
                     target["SUBJ"] = int(id_col)
@@ -66,13 +68,4 @@ class DataPreparation:
     def rows_normalization(self):
         for row in self._rows:
             for id_col, _ in enumerate(row["data"]):
-                row["data"][id_col] = self._clean_str(row["data"][id_col])
-
-
-    def _clean_str(self, value):
-        value = str(value)
-        stop_charaters = ["_"]
-        for char in stop_charaters:
-            value = value.replace(char, " ")
-        value = " ".join(value.split()).lower()
-        return value
+                row["data"][id_col] = utils.clean_str(row["data"][id_col])
