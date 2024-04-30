@@ -348,7 +348,6 @@ class Dataset(Resource):
     },
     params={ 
         "datasetName": {"description": "The name of the dataset to retrieve.", "type": "string"},
-        "page": {"description": "Page number for pagination. Each page returns a subset of the dataset.", "type": "integer"},
         "token": {"description": "API key token for authentication.", "type": "string"}
     }
 )
@@ -366,24 +365,21 @@ class DatasetID(Resource):
         """
         parser = reqparse.RequestParser()
         parser.add_argument("token", type=str, help="variable 1", location="args")
-        parser.add_argument("page", type=int, help="variable 2", location="args")
         args = parser.parse_args()
         token = args["token"]
         dataset_name = datasetName
-        page = args["page"]
 
         if not validate_token(token):
             return {"Error": "Invalid Token"}, 403
 
-        if page is None or len(page) == 0:
-            page = 1
-        
         try:    
-            results = table_c.find({"datasetName": dataset_name, "page": page})
+            results = dataset_c.find({"datasetName": dataset_name})
             out = [
                 {
-                    "tableName": result["tableName"],
-                    "status": result["status"]
+                    "datasetName": result["datasetName"],
+                    "Ntables": result["Ntables"],
+                    "%": result["%"],
+                    "status": result["process"]
                 }
                 for result in results
             ]
@@ -519,7 +515,7 @@ class DatasetTable(Resource):
 
         try:
             query = {"datasetName": datasetName, "page": int(page)}
-            results = row_c.find(query)
+            results = table_c.find(query)
             out = []
             for result in results:
                 out.append({
