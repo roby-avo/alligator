@@ -1,4 +1,4 @@
-
+import utils.utils as utils
 
 class DataPreparation:
     def __init__(self, header, rows, lamAPI):
@@ -25,10 +25,10 @@ class DataPreparation:
         return parsed_header
             
   
-    async def compute_datatype(self):
+    async def compute_datatype(self, current_column_metadata, current_target):
         column_metadata = {}
         print("column_metadata", self._column_to_datatype)
-        target = {"SUBJ": None, "NE": [], "LIT": [], "LIT_DATATYPE": {}}
+        target = {"SUBJ": None, "NE": [], "LIT": [], "NO_TAG": [], "LIT_DATATYPE": {}}
         columns_data = [[] for _ in range(0, len(self._rows[0]['data']))]
         for row in self._rows:
             for id_col, cell in enumerate(row["data"]):
@@ -38,7 +38,11 @@ class DataPreparation:
         first_NE_column = False  
         for id_col in metadata:
             lit_datatype = None
-            if id_col not in self._column_to_datatype:
+            if id_col in current_column_metadata:
+                tag = current_column_metadata[id_col]
+                if tag == "LIT":
+                    lit_datatype = current_target["LIT_DATATYPE"][id_col]
+            elif id_col not in self._column_to_datatype:
                 tag = metadata[id_col]["tag"]
                 if tag == "LIT":
                     lit_datatype = metadata[id_col]["datatype"]
@@ -48,26 +52,20 @@ class DataPreparation:
             
             column_metadata[id_col] = tag    
             target[tag].append(int(id_col)) 
+            if tag == "SUBJ": # you just need it for degugging if you re-run stuff!
+                tag = "NE"
             if tag == "NE":
                 if not first_NE_column:
                     target["SUBJ"] = int(id_col)
                 first_NE_column = True
             else:
                 target['LIT_DATATYPE'][str(id_col)] = lit_datatype
-                
+        
+
         return column_metadata, target        
 
 
     def rows_normalization(self):
         for row in self._rows:
             for id_col, _ in enumerate(row["data"]):
-                row["data"][id_col] = self._clean_str(row["data"][id_col])
-
-
-    def _clean_str(self, value):
-        value = str(value)
-        stop_charaters = ["_"]
-        for char in stop_charaters:
-            value = value.replace(char, " ")
-        value = " ".join(value.split()).lower()
-        return value
+                row["data"][id_col] = utils.clean_str(row["data"][id_col])

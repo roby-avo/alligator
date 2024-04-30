@@ -6,7 +6,7 @@ services:
       context: .
       args: 
         PYTHON_VERSION: ${PYTHON_VERSION}
-    command: bash -c "flask run --host=0.0.0.0 & ./bash/computation.sh ${MAX_NUMBER_OF_JOB} & python ./utils/update_status.py"    
+    command: bash -c "gunicorn -w $MAX_NUMBER_OF_JOB -b 0.0.0.0:5000 app:app --timeout 300 --reload --log-level debug & ./bash/computation.sh ${MAX_NUMBER_OF_JOB} & python ./utils/update_status.py"    
     container_name: alligator_api
     env_file:
       - ./.env
