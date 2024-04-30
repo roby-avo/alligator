@@ -58,7 +58,7 @@ class DataPreparation:
                 if not first_NE_column:
                     target["SUBJ"] = int(id_col)
                 first_NE_column = True
-            else:
+            elif tag == "LIT":
                 target['LIT_DATATYPE'][str(id_col)] = lit_datatype
         
 

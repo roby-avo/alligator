@@ -46,7 +46,7 @@ class Lookup:
             elif i in self._target["LIT"]:
                 row.add_lit_cell(cell, i, self._target["LIT_DATATYPE"][str(i)])
             else:    
-                row.add_notag_cell(cell)
+                row.add_notag_cell(cell, i)
         return row
 
     
