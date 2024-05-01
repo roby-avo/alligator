@@ -490,7 +490,17 @@ class DatasetTable(Resource):
         
         return {"status": "Ok", "tables": out}, 202
     
-    def get(self, datasetName, page=None):
+    @ds.doc(
+        params={
+            "page": {
+                "description": "The page number for paginated results, default is 1.",
+                "type": "int",
+                "default": 1
+            }
+        },
+        description="Retrieve tables within dataset with pagination. Each page contains a subset of tables."
+    )
+    def get(self, datasetName):
         """
             Handles the retrieval of information about tables within a specified dataset.
             Parameters:
@@ -510,8 +520,6 @@ class DatasetTable(Resource):
         if not validate_token(token):
             return {"Error": "Invalid Token"}, 403
         
-        if page is None:
-            page = 1
 
         try:
             query = {"datasetName": datasetName, "page": int(page)}
