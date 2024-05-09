@@ -50,10 +50,11 @@ class DataPreparation:
                 tag = self._column_to_datatype[id_col]['kind']
                 lit_datatype = self._column_to_datatype[id_col]['datatype']
             
-            column_metadata[id_col] = tag    
-            target[tag].append(int(id_col)) 
             if tag == "SUBJ": # you just need it for degugging if you re-run stuff!
                 tag = "NE"
+
+            column_metadata[id_col] = tag    
+            target[tag].append(int(id_col)) 
             if tag == "NE":
                 if not first_NE_column:
                     target["SUBJ"] = int(id_col)
