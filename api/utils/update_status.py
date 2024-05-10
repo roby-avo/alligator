@@ -80,6 +80,10 @@ while True:
         print("ids_job_to_update", ids_job_to_update)
         for id_job in ids_job_to_update:
             job = job_c.find_one({"_id": id_job})
+
+            if job is None:
+                continue
+
             elapsed_time = round(time.time() - job["startTime"], 2)
             
             TODO, DOING, DONE = [ids_job_to_update[id_job].get(key, 0) for key in ["TODO", "DOING", "DONE"]]
