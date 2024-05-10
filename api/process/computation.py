@@ -22,8 +22,8 @@ from wrapper.Database import MongoDBWrapper  # MongoDB database wrapper
 async def main():
     start = time.time()
 
-    pn_neural_path = "./process/ml_models/Linker1.0_PN.h5"
-    rn_neural_path = "./process/ml_models/Linker1.0_RN.h5"
+    pn_neural_path = "./process/ml_models/Linker_PN_100.h5"
+    rn_neural_path = "./process/ml_models/Linker_RN_100.h5"
 
     pn_model = load_model(pn_neural_path)    
     rn_model = load_model(rn_neural_path)    
