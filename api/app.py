@@ -587,7 +587,7 @@ class TableID(Resource):
         try:
             out = self._get_table(datasetName, tableName, page)
             out = self._replace_nan_with_none(out)  # Replace NaN with None in the output
-            return jsonify(out)
+            return out
         except Exception as e:
             print({"traceback": traceback.format_exc()}, flush=True)
             return {"status": "Error", "message": str(e)}, 404
