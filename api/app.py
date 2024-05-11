@@ -2,17 +2,13 @@
 import os  # For interacting with the operating system
 import math  # For mathematical operations
 import traceback  # To provide details of exceptions
-import pandas as pd  # Popular data manipulation package
 import redis  # Redis database interface
 from flask import Flask, request, jsonify  # Flask web framework components
 from flask_cors import CORS  # To handle Cross-Origin Resource Sharing (CORS)
 from flask_restx import Api, Resource, fields, reqparse  # Extensions for Flask to ease REST API development
 from werkzeug.datastructures import FileStorage  # To handle file storage in Flask
-
-
-import tensorflow as tf
 import logging
-
+import pymongo  # MongoDB interface
 # Disable TensorFlow warnings
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # This hides info and warning messages
 
@@ -25,7 +21,6 @@ logging.getLogger('tensorflow').setLevel(logging.ERROR)
 from process.wrapper.Database import MongoDBWrapper  # MongoDB database wrapper
 from utils.Dataset import DatasetModel  # Dataset utility model
 from utils.Table import TableModel  # Table utility model
-import pymongo  # MongoDB database interface
 
 
 # Retrieve environment variables for Redis configuration and API token
@@ -211,8 +206,7 @@ class CreateWithArray(Resource):
             out = [{"id": str(table["_id"]), "datasetName": table["datasetName"], "tableName": table["tableName"]} for table in tables]
         except Exception as e:
             print({"traceback": traceback.format_exc()}, flush=True)
-            #return {"status": "Error", "message": str(e)}, 400
-
+            
         return {"status": "Ok", "tables": out}, 202
    
 
@@ -262,16 +256,24 @@ class Dataset(Resource):
         args = parser.parse_args()
         token = args["token"]
         page = args["page"]
+
         if page is None:
             page = 1
-        elif page.isnumeric():
-            page = int(page)
-        else:
-            return {"Error": "Invalid Number of Page"}, 403        
+
         if not validate_token(token):
             return {"Error": "Invalid Token"}, 403
         
         try:
+            page = int(page)
+            # Calculate the total number of pages
+            max_page_result = list(dataset_c.aggregate([
+                {"$group": {"_id": None, "max": {"$max": "$page"}}}
+            ]))
+            total_pages = 0
+            if max_page_result:
+                total_pages = max_page_result[0]['max']
+            
+            # Fetch results for the given page
             results = dataset_c.find({"page": page})
             out = [
                 {
@@ -283,9 +285,16 @@ class Dataset(Resource):
                 }
                 for result in results
             ]
-            return out
+
+            # Return both data and pagination info
+            return {
+                "data": out,
+                "pagination": {
+                    "currentPage": page,
+                    "totalPages": total_pages
+                }
+            }
         except Exception as e:
-            print({"traceback": traceback.format_exc()}, flush=True)
             return {"status": "Error", "message": str(e)}, 400
 
     
@@ -379,13 +388,13 @@ class DatasetID(Resource):
                     "datasetName": result["datasetName"],
                     "Ntables": result["Ntables"],
                     "%": result["%"],
-                    "status": result["process"]
+                    "status": result["process"],
+                    "page": result["page"]
                 }
                 for result in results
             ]
             return out
         except Exception as e:
-            print({"traceback": traceback.format_exc()}, flush=True)
             return {"status": "Error", "message": str(e)}, 400
 
 
@@ -408,10 +417,11 @@ class DatasetID(Resource):
             return {"Error": "Invalid Token"}, 403
         try:
             self._delete_dataset(dataset_name)
+            return {"datasetName": datasetName, "deleted": True}, 200     
         except Exception as e:
             print({"traceback": traceback.format_exc()}, flush=True)
             return {"status": "Error", "message": str(e)}, 400
-        return {"datasetName": datasetName, "deleted": True}, 200           
+              
 
     def _delete_dataset(self, dataset_name):
         query = {"datasetName": dataset_name}
@@ -466,7 +476,6 @@ class DatasetTable(Resource):
         if not validate_token(token):
             return {"Error": "Invalid Token"}, 403
         
-
         try:
             args = upload_parser.parse_args()
             uploaded_file = args["file"]  # This is FileStorage instance
@@ -482,14 +491,14 @@ class DatasetTable(Resource):
             row_c.insert_many(tables)    
             job_active.delete("STOP")
             out = [{"id": str(table["_id"]),  "datasetName": table["datasetName"], "tableName": table["tableName"]} for table in tables]
+            return {"status": "Ok", "tables": out}, 202
         except pymongo.errors.DuplicateKeyError as e:
             pass
             #print({"traceback": traceback.format_exc()}, flush=True)       
         except Exception as e:
             return {"status": "Error", "message": str(e), "traceback": traceback.format_exc()}, 400
         
-        return {"status": "Ok", "tables": out}, 202
-    
+        
     @ds.doc(
         params={
             "page": {
@@ -516,13 +525,21 @@ class DatasetTable(Resource):
         args = parser.parse_args()
         page = args["page"]
         token = args["token"]
-
+        
         if not validate_token(token):
             return {"Error": "Invalid Token"}, 403
         
-
         try:
-            query = {"datasetName": datasetName, "page": int(page)}
+            page = int(page)
+            max_pages_result = list(table_c.aggregate([
+                {"$match": {"datasetName": datasetName}},
+                {"$group": {"_id": None, "max": {"$max": "$page"}}}
+            ]))
+            total_pages = 0       
+            if max_pages_result:
+                total_pages = max_pages_result[0]["max"]
+        
+            query = {"datasetName": datasetName, "page": page}
             results = table_c.find(query)
             out = []
             for result in results:
@@ -532,14 +549,19 @@ class DatasetTable(Resource):
                     "nrows": result["Nrows"],
                     "status": result["status"]
                 })
+
+            return {
+                "data": out,
+                "pagination": {
+                    "currentPage": page,
+                    "totalPages": total_pages
+                }
+            }, 200
         except Exception as e:
             print({"traceback": traceback.format_exc()}, flush=True)
-            out = {"status": "Error", "message": str(e)}, 400        
+            return {"status": "Error", "message": str(e)}, 400        
 
-        return out, 200
-    
-
-
+       
 @ds.route("/<datasetName>/table/<tableName>")
 @ds.doc(
     description="Endpoint for retrieving and deleting specific tables within a dataset.",
@@ -585,9 +607,16 @@ class TableID(Resource):
         # will have to change in the future 
         
         try:
-            out = self._get_table(datasetName, tableName, page)
+            page = int(page)
+            out, total_pages = self._get_table(datasetName, tableName, page)
             out = self._replace_nan_with_none(out)  # Replace NaN with None in the output
-            return out
+            return {
+                "data": out,
+                "pagination": {
+                    "currentPage": page,
+                    "totalPages": total_pages
+                }
+            }, 200
         except Exception as e:
             print({"traceback": traceback.format_exc()}, flush=True)
             return {"status": "Error", "message": str(e)}, 404
@@ -607,8 +636,17 @@ class TableID(Resource):
     
     def _get_table(self, dataset_name, table_name, page=None):
         query = {"datasetName": dataset_name, "tableName": table_name}
+        max_pages_result = list(row_c.aggregate([
+            {"$match": query},
+            {"$group": {"_id": None, "max": {"$max": "$page"}}}
+        ]))
+        total_pages = 0
+        if max_pages_result:
+            total_pages = max_pages_result[0]["max"]
+      
         if page is not None:
             query["page"] = page
+
         results = row_c.find(query)
         out = [
             {
@@ -624,7 +662,7 @@ class TableID(Resource):
         ]
 
         if len(out) == 0:
-            return {"status": "Error", "message": "Table not found"}, 404
+            return [], total_pages   
         
         buffer = out[0]
         for o in out[1:]:
@@ -686,7 +724,7 @@ class TableID(Resource):
                         "idColumn": int(id_col),
                         "types": [winning_types[id_col]]
                     })            
-        return out
+        return out, total_pages
     
     
     def delete(self, datasetName, tableName):
@@ -709,11 +747,11 @@ class TableID(Resource):
 
         try:
             self._delete_table(datasetName, tableName)
+            return {"datasetName": datasetName, "tableName": tableName, "deleted": True}, 200
         except Exception as e:
             print({"traceback": traceback.format_exc()}, flush=True)
             return {"status": "Error", "message": str(e)}, 400
 
-        return {"datasetName": datasetName, "tableName": tableName, "deleted": True}, 200
     
     def _delete_table(self, dataset_name, table_name):
         query = {"datasetName": dataset_name, "tableName": table_name}
