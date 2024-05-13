@@ -3,15 +3,23 @@ import re
 
 
 def clean_str(value):
-    value = str(value).lower()
-    # Remove content inside parentheses and brackets
-    value = re.sub(r"[\(\[].*?[\)\]]", "", value)
+    original_value = str(value).lower()
+    value = original_value
+    
+    # Remove purely numerical content within brackets
+    value = re.sub(r'\[\d+\w*\]', '', value)
+    
     # Remove specific unwanted characters
     stop_characters = ["_"]
     for char in stop_characters:
         value = value.replace(char, " ")
+    
     # Remove extra spaces and strip leading/trailing spaces
     value = " ".join(value.split())
+    
+    # Return the original string if the cleaned result is empty
+    if not value:
+        return original_value
     return value
 
 
