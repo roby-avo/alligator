@@ -607,16 +607,20 @@ class TableID(Resource):
         # will have to change in the future 
         
         try:
-            page = int(page)
+            if page is not None:
+                page = int(page)
             out, total_pages = self._get_table(datasetName, tableName, page)
             out = self._replace_nan_with_none(out)  # Replace NaN with None in the output
-            return {
-                "data": out,
-                "pagination": {
-                    "currentPage": page,
-                    "totalPages": total_pages
-                }
-            }, 200
+            if page is not None:
+                return {
+                    "data": out,
+                    "pagination": {
+                        "currentPage": page,
+                        "totalPages": total_pages
+                    }
+                }, 200
+            else:
+                return out, 200
         except Exception as e:
             print({"traceback": traceback.format_exc()}, flush=True)
             return {"status": "Error", "message": str(e)}, 404

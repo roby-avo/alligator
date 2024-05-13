@@ -30,7 +30,7 @@ class LamAPI():
             if self.format == "json":
                 result_json = await response.json()
                 for kg in ["wikidata", "dbpedia", "crunchbase"]:
-                    if kg in result_json:
+                    if result_json and kg in result_json:
                         return result_json[kg]
                 return result_json  # If none of the keys are found, return the original JSON data
             else:
