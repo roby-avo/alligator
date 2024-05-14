@@ -102,6 +102,14 @@ class MongoDBWrapper:
         collection = self.get_collection(collection_name)
         return collection.delete_many(query).deleted_count
 
+    def get_client(self):
+        """
+        Get the MongoDB client.
+
+        :return: MongoClient object.
+        """
+        return self.client
+
     def close(self):
         """
         Close the database connection.
