@@ -32,6 +32,8 @@ class LamAPI():
                 for kg in ["wikidata", "dbpedia", "crunchbase"]:
                     if result_json and kg in result_json:
                         return result_json[kg]
+                if result_json is None:    
+                    result_json = {}
                 return result_json  # If none of the keys are found, return the original JSON data
             else:
                 raise Exception("Sorry, Invalid format!")
