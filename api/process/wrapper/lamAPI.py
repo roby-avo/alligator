@@ -41,7 +41,7 @@ class LamAPI():
     async def __submit_get(self, url, params):
         try:
             retry_options = ExponentialRetry(attempts=3, start_timeout=3, max_timeout=10)
-            timeout = aiohttp.ClientTimeout(total=60)  # Adjusted timeout
+            timeout = aiohttp.ClientTimeout(total=1000)  # Adjusted timeout
             async with self.semaphore:
                 async with RetryClient(connector=aiohttp.TCPConnector(ssl=False), retry_options=retry_options) as session:
                     async with session.get(url, headers=headers, params=params, timeout=timeout) as response:
