@@ -72,7 +72,8 @@ async def main():
     
     try:
         column_metadata, target = await dp.compute_datatype(column_metadata, target)
-        column_metadata[str(target["SUBJ"])] = "SUBJ"
+        if target["SUBJ"] is not None:
+            column_metadata[str(target["SUBJ"])] = "SUBJ"
         obj_row_update["column"] = column_metadata
         obj_row_update["metadata"] = {
             "column": [{"idColumn": int(id_col), "tag": column_metadata[id_col]} for id_col in column_metadata]
