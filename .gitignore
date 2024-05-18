@@ -163,3 +163,4 @@ mongo-data/
 .DS_Store
 
 *.ipynb
+GeoLite2-City.mmdb

@@ -13,3 +13,7 @@ scikit-learn==1.4.1.post1
 tensorflow==2.16.1
 aiohttp==3.9.3
 aiohttp_retry==2.8.3
+Flask-Limiter==3.6.0
+geoip2==4.8.0
+Flask-Testing==0.8.1
+python-dotenv==1.0.1
