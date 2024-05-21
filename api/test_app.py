@@ -31,6 +31,12 @@ class TestAPI(TestCase):
         self.assertEqual(response.status_code, 403)
         self.assertEqual(response.json['Error'], 'Invalid Token')
 
+    def test_delete_dataset(self):
+        self.client.post('/dataset', query_string={'token': os.getenv("ALLIGATOR_TOKEN_SECRET")}, json={'datasetName': 'test_dataset'})
+        response = self.client.delete('/dataset/test_dataset', query_string={'token': os.getenv("ALLIGATOR_TOKEN_SECRET")})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json['deleted'], True)
+
     def test_create_dataset(self):
         response = self.client.post('/dataset', query_string={
             'token': os.getenv("ALLIGATOR_TOKEN_SECRET"),
@@ -74,11 +80,6 @@ class TestAPI(TestCase):
         self.assertEqual(response.status_code, 202)
         self.assertEqual(response.json['status'], 'Ok')
 
-    def test_delete_dataset(self):
-        self.client.post('/dataset', query_string={'token': os.getenv("ALLIGATOR_TOKEN_SECRET")}, json={'datasetName': 'test_dataset'})
-        response = self.client.delete('/dataset/test_dataset', query_string={'token': os.getenv("ALLIGATOR_TOKEN_SECRET")})
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json['deleted'], True)
 
     def test_rate_limiting(self):
         token = os.getenv("ALLIGATOR_TOKEN")

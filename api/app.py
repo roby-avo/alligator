@@ -264,13 +264,6 @@ class CreateWithArray(Resource):
             Receives an array of table data for bulk processing.
             This endpoint is used for annotating multiple tables in a single API call.
         """
-        parser = reqparse.RequestParser()
-        parser.add_argument("token", type=str, help="variable 1", location="args")
-        args = parser.parse_args()
-        token = args["token"]
-        if not validate_token(token):
-            return {"Error": "Invalid Token"}, 403
-        
         out = []
 
         try:
@@ -410,9 +403,6 @@ class Dataset(Resource):
         args = parser.parse_args()
         token = args["token"]
         dataset_name = args["datasetName"]
-
-        if not validate_token(token):
-            return {"Error": "Invalid Token"}, 403
         
         data = {
             "datasetName": dataset_name,
@@ -469,9 +459,6 @@ class DatasetID(Resource):
         token = args["token"]
         dataset_name = datasetName
 
-        if not validate_token(token):
-            return {"Error": "Invalid Token"}, 403
-
         try:    
             results = dataset_c.find({"datasetName": dataset_name})
             out = [
@@ -504,8 +491,7 @@ class DatasetID(Resource):
         dataset_name = datasetName
         args = parser.parse_args()
         token = args["token"]
-        if not validate_token(token):
-            return {"Error": "Invalid Token"}, 403
+       
         try:
             self._delete_dataset(dataset_name)
             return {"datasetName": datasetName, "deleted": True}, 200     
@@ -569,10 +555,7 @@ class DatasetTable(Resource):
         kg_reference = "wikidata"
         if args["kgReference"] is not None:
             kg_reference = args["kgReference"]
-        token = args["token"]
-        if not validate_token(token):
-            return {"Error": "Invalid Token"}, 403
-        
+       
         try:
             args = upload_parser.parse_args()
             uploaded_file = args["file"]  # This is FileStorage instance
@@ -621,10 +604,6 @@ class DatasetTable(Resource):
         parser.add_argument("token", type=str, help="variable 1", location="args")
         args = parser.parse_args()
         page = args["page"]
-        token = args["token"]
-        
-        if not validate_token(token):
-            return {"Error": "Invalid Token"}, 403
         
         try:
             page = int(page)
@@ -696,12 +675,7 @@ class TableID(Resource):
         parser.add_argument("token", type=str, help="variable 1", location="args")
         args = parser.parse_args()
         page = args["page"]
-        token = args["token"]
         
-       
-        if not validate_token(token):
-            return {"Error": "Invalid Token"}, 403
-
         # if page isn't specified, return all pages
         """
         if page is None:
@@ -849,8 +823,6 @@ class TableID(Resource):
         args = parser.parse_args()
         token = args["token"]
        
-        if not validate_token(token):
-            return {"Error": "Invalid Token"}, 403
 
         try:
             self._delete_table(datasetName, tableName)
