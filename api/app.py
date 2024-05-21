@@ -100,7 +100,7 @@ def before_request():
     
     now = datetime.now()
     limit_window = timedelta(days=1)
-    max_requests = 1  # Maximum number of requests per day
+    max_requests = 1000  # Maximum number of requests per day
 
     rate_limit_record = rate_limit_c.find_one({"ip": rate_limit_key, "date": str(now.date())})
 
@@ -403,17 +403,11 @@ class Dataset(Resource):
         args = parser.parse_args()
         token = args["token"]
         dataset_name = args["datasetName"]
-        
-        data = {
-            "datasetName": dataset_name,
-            "Ntables": 0,
-            "blocks": 0,
-            "%": 0,
-            "process": None
-        }    
+
         try:
+            dataset = DatasetModel(mongoDBWrapper, {dataset_name: {}})
+            dataset.store_datasets()
             result = {"message": f"Created dataset {dataset_name}"}, 200
-            dataset_c.insert_one(data)
         except Exception as e:
             result = {"message": f"Dataset {dataset_name} already exist"}, 400
 

@@ -80,7 +80,6 @@ class TestAPI(TestCase):
         self.assertEqual(response.status_code, 202)
         self.assertEqual(response.json['status'], 'Ok')
 
-
     def test_rate_limiting(self):
         token = os.getenv("ALLIGATOR_TOKEN")
         for _ in range(1000):
@@ -88,6 +87,114 @@ class TestAPI(TestCase):
         response = self.client.get('/dataset', query_string={'token': token})
         self.assertEqual(response.status_code, 429)
         self.assertEqual(response.json['Error'], 'Rate limit exceeded')
+
+    def test_get_dataset_by_name(self):
+        # Create the dataset first
+        self.client.post('/dataset', query_string={
+            'token': os.getenv("ALLIGATOR_TOKEN_SECRET"),
+            'datasetName': 'test_dataset',
+        })
+
+        # Retrieve the dataset
+        response = self.client.get('/dataset/test_dataset', query_string={
+            'token': os.getenv("ALLIGATOR_TOKEN_SECRET")
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(isinstance(response.json, list))
+        self.assertTrue(len(response.json) > 0)
+
+    def test_upload_table_to_dataset(self):
+        # Create the dataset first
+        self.client.post('/dataset', query_string={
+            'token': os.getenv("ALLIGATOR_TOKEN_SECRET"),
+            'datasetName': 'test_dataset'
+        })
+
+        # Upload a table to the dataset
+        data = {
+            'file': (open('test_table.csv', 'rb'), 'test_table.csv')
+        }
+        response = self.client.post('/dataset/test_dataset/table', data=data, content_type='multipart/form-data', query_string={
+            'token': os.getenv("ALLIGATOR_TOKEN_SECRET"),
+            'kgReference': 'wikidata'
+        })
+
+        self.assertEqual(response.status_code, 202)
+        self.assertEqual(response.json['status'], 'Ok')
+
+    def test_get_tables_in_dataset(self):
+        # Create the dataset first
+        self.client.post('/dataset', query_string={
+            'token': os.getenv("ALLIGATOR_TOKEN_SECRET"),
+            'datasetName': 'test_dataset'
+        })
+
+        # Upload a table to the dataset
+        data = {
+            'file': (open('test_table.csv', 'rb'), 'test_table.csv')
+        }
+        self.client.post('/dataset/test_dataset/table', data=data, content_type='multipart/form-data', query_string={
+            'token': os.getenv("ALLIGATOR_TOKEN_SECRET"),
+            'kgReference': 'wikidata',
+        })
+
+        # Retrieve tables in the dataset
+        response = self.client.get('/dataset/test_dataset/table', query_string={
+            'token': os.getenv("ALLIGATOR_TOKEN_SECRET"),
+            'page': 1
+        })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue('data' in response.json)
+
+    def test_get_specific_table(self):
+        # Create the dataset first
+        self.client.post('/dataset', query_string={
+            'token': os.getenv("ALLIGATOR_TOKEN_SECRET"),
+            'datasetName': 'test_dataset'
+        })
+
+        # Upload a table to the dataset
+        data = {
+            'file': (open('test_table.csv', 'rb'), 'test_table.csv')
+        }
+        self.client.post('/dataset/test_dataset/table', data=data, content_type='multipart/form-data', query_string={
+            'token': os.getenv("ALLIGATOR_TOKEN_SECRET"),
+            'kgReference': 'wikidata'
+        })
+
+        # Retrieve the specific table
+        response = self.client.get('/dataset/test_dataset/table/test_table', query_string={
+            'token': os.getenv("ALLIGATOR_TOKEN_SECRET")
+        })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(isinstance(response.json, dict))
+
+    def test_delete_specific_table(self):
+        # Create the dataset first
+        self.client.post('/dataset', query_string={
+            'token': os.getenv("ALLIGATOR_TOKEN_SECRET"),
+            'datasetName': 'test_dataset'
+        })
+
+        # Upload a table to the dataset
+        data = {
+            'file': (open('test_table.csv', 'rb'), 'test_table.csv')
+        }
+        self.client.post('/dataset/test_dataset/table', data=data, content_type='multipart/form-data', query_string={
+            'token': os.getenv("ALLIGATOR_TOKEN_SECRET"),
+            'kgReference': 'wikidata'
+        })
+
+        # Delete the specific table
+        response = self.client.delete('/dataset/test_dataset/table/test_table', query_string={
+            'token': os.getenv("ALLIGATOR_TOKEN_SECRET")
+        })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json['deleted'], True)
+
 
 if __name__ == '__main__':
     unittest.main()
