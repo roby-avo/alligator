@@ -1,6 +1,6 @@
 K = 0.6
 THRESHOLD = 0.03
-SIGMA = 0.5
+SIGMA = 0.3
 
 class Decision:
     def __init__(self, metadata: dict, cea_prelinking_data, rows, cta, cpa, collections: dict):
