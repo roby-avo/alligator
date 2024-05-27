@@ -1,69 +1,152 @@
-# Import necessary packages and modules
-import os  # For interacting with the operating system
-import math  # For mathematical operations
-import traceback  # To provide details of exceptions
-import redis  # Redis database interface
-from flask import Flask, request, jsonify  # Flask web framework components
-from flask_cors import CORS  # To handle Cross-Origin Resource Sharing (CORS)
-from flask_restx import Api, Resource, fields, reqparse  # Extensions for Flask to ease REST API development
-from werkzeug.datastructures import FileStorage  # To handle file storage in Flask
+import os
 import logging
-import pymongo  # MongoDB interface
-# Disable TensorFlow warnings
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # This hides info and warning messages
+import redis
+import pymongo
+import traceback
+import geoip2.database
+from flask import Flask, request, jsonify
+from flask_cors import CORS
+from flask_restx import Api, Resource, fields, reqparse
+from werkzeug.datastructures import FileStorage
+from datetime import datetime, timedelta
 
-# Or, to suppress all TensorFlow messages (including errors)
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-
-# Additionally, to suppress Python warnings
+# Disable TensorFlow warnings and suppress Python warnings
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 logging.getLogger('tensorflow').setLevel(logging.ERROR)
 
-from process.wrapper.Database import MongoDBWrapper  # MongoDB database wrapper
-from utils.Dataset import DatasetModel  # Dataset utility model
-from utils.Table import TableModel  # Table utility model
+from process.wrapper.Database import MongoDBWrapper
+from utils.Dataset import DatasetModel
+from utils.Table import TableModel
+
+# Configuration
+REDIS_ENDPOINT = os.environ["REDIS_ENDPOINT"]
+REDIS_JOB_DB = int(os.environ["REDIS_JOB_DB"])
+API_TOKEN = os.environ["ALLIGATOR_TOKEN"]
+UNLIMITED_TOKEN = os.environ["ALLIGATOR_TOKEN_SECRET"]
+MAXIMUM_REQUESTS_PER_DAY = os.environ["MAXIMUM_REQUESTS_PER_DAY"]
+MAX_CONTENT_LENGTH = 500 * 1024 * 1024  # 500MB limit
 
 
-# Retrieve environment variables for Redis configuration and API token
-REDIS_ENDPOINT = os.environ["REDIS_ENDPOINT"]  # Endpoint for Redis connection
-REDIS_JOB_DB = int(os.environ["REDIS_JOB_DB"])  # Redis database number for jobs
-
-API_TOKEN = os.environ["ALLIGATOR_TOKEN"]  # API token for authentication
-
-# Initialize Redis client for tracking active jobs
+# Initialize Redis client and MongoDB wrapper
 job_active = redis.Redis(host=REDIS_ENDPOINT, db=REDIS_JOB_DB)
-
-# Initialize MongoDB wrapper and get collections for different data models
 mongoDBWrapper = MongoDBWrapper()
 row_c = mongoDBWrapper.get_collection("row")
+cea_prelinking_c = mongoDBWrapper.get_collection("ceaPrelinking")
 candidate_scored_c = mongoDBWrapper.get_collection("candidateScored")
 cea_c = mongoDBWrapper.get_collection("cea")
 cpa_c = mongoDBWrapper.get_collection("cpa")
 cta_c = mongoDBWrapper.get_collection("cta")
 dataset_c = mongoDBWrapper.get_collection("dataset")
 table_c = mongoDBWrapper.get_collection("table")
+rate_limit_c = mongoDBWrapper.get_collection("rateLimit")
 
 # Initialize Flask application and enable CORS
 app = Flask(__name__)
+app.config['MAX_CONTENT_LENGTH'] = MAX_CONTENT_LENGTH  # Set maximum request size to 500MB
 CORS(app)
 
-# Read API description from a text file
+# Load API description
 with open("data.txt") as f:
     description = f.read()
 
-# Set up the API with version, title, and description read from the file
 api = Api(app, version="1.0", title="Alligator", description=description)
-
-# Define a namespace for dataset related operations
 ds = api.namespace("dataset", description="Dataset namespace")
 
-# Initialize a parser for file uploads
 upload_parser = api.parser()
-upload_parser.add_argument("file", location="files",
-                           type=FileStorage, required=True)
+upload_parser.add_argument("file", location="files", type=FileStorage, required=True)
 
-# Define a function to validate the provided token against the expected API token
+# Token validation function
 def validate_token(token):
-    return token == API_TOKEN
+    return token == API_TOKEN 
+
+
+# GeoIP database setup
+db_path = './GeoLite2-City.mmdb'
+geolocation_enabled = os.path.exists(db_path)
+if geolocation_enabled:
+    reader = geoip2.database.Reader(db_path)
+else:
+    app.logger.error("GeoLite2 database file does not exist.")
+
+
+# Rate limiting and geolocation tracking based on IP address
+@app.before_request
+def before_request():
+    # List of paths to exempt from validation
+    swagger_endpoints = [
+        '/', 
+        '/swagger.json', 
+        '/swaggerui/droid-sans.css', 
+        '/swaggerui/swagger-ui-bundle.js', 
+        '/swaggerui/swagger-ui-standalone-preset.js', 
+        '/swaggerui/swagger-ui.css', 
+        '/favicon-32x32.png', 
+        '/favicon-16x16.png',
+        '/swaggerui/favicon-32x32.png',  # Including exact path for favicons
+        '/swaggerui/favicon-16x16.png'
+    ]
+    
+    # Token validation
+    token = request.args.get('token')
+
+    # Exempting Swagger UI paths from validation
+    if request.path in swagger_endpoints or token == UNLIMITED_TOKEN:
+        return
+        
+    if not validate_token(token):
+        return jsonify({"Error": "Invalid Token"}), 403
+
+    # Rate limiting based on IP address
+    ip_address = request.headers.get('X-Forwarded-For', request.remote_addr).split(',')[0]
+    rate_limit_key = ip_address
+    
+    now = datetime.now()
+    limit_window = timedelta(days=1)
+    max_requests = 1000  # Maximum number of requests per day
+
+    rate_limit_record = rate_limit_c.find_one({"ip": rate_limit_key, "date": str(now.date())})
+
+    if rate_limit_record:
+        last_request_time = rate_limit_record["last_request"]
+        request_count = rate_limit_record["count"]
+
+        if now - last_request_time < limit_window:
+            if request_count >= max_requests:
+                return jsonify({"Error": "Rate limit exceeded"}), 429
+            else:
+                rate_limit_c.update_one(
+                    {"ip": rate_limit_key, "date": str(now.date())},
+                    {"$inc": {"count": 1}, "$set": {"last_request": now}}
+                )
+        else:
+            rate_limit_c.update_one(
+                {"ip": rate_limit_key, "date": str(now.date())},
+                {"$set": {"count": 1, "last_request": now}}
+            )
+    else:
+        rate_limit_c.insert_one({"ip": rate_limit_key, "count": 1, "last_request": now, "date": str(now.date())})
+
+    # Geolocation tracking
+    if geolocation_enabled:
+        try:
+            response = reader.city(ip_address)
+            geolocation = {
+                "city": response.city.name,
+                "region": response.subdivisions.most_specific.name,
+                "country": response.country.name,
+                "latitude": response.location.latitude,
+                "longitude": response.location.longitude
+            }
+        except geoip2.errors.AddressNotFoundError:
+            geolocation = {"error": "IP address not found in database"}
+
+        # Log IP and geolocation information
+        rate_limit_c.update_one(
+            {"ip": rate_limit_key, "date": str(now.date())},
+            {"$set": {"geolocation": geolocation}},
+            upsert=True
+        )
+
 
 # Define data models for the API to serialize and deserialize data
 rows_fields = api.model("Rows", {
@@ -159,10 +242,16 @@ table_list_field = api.model("TablesList",  {
     responses={
         202: "Accepted - The request has been accepted for processing.",
         400: "Bad Request - There was an error in the request. This might be due to invalid parameters or file format.",
-        403: "Forbidden - Access denied due to invalid token."
+        403: "Forbidden - Access denied due to invalid token.",
+        413: "Payload Too Large - The request payload exceeds the maximum size limit.",
+        429: "Too Many Requests - The rate limit for the API has been exceeded."
     },
     params={ 
-        "token": "token api key"
+        "token": {
+            "description": "An API token for authentication and authorization purposes.",
+            "type": "string",
+            "required": True
+        }
     }
 )
 class CreateWithArray(Resource):
@@ -177,13 +266,6 @@ class CreateWithArray(Resource):
             Receives an array of table data for bulk processing.
             This endpoint is used for annotating multiple tables in a single API call.
         """
-        parser = reqparse.RequestParser()
-        parser.add_argument("token", type=str, help="variable 1", location="args")
-        args = parser.parse_args()
-        token = args["token"]
-        if not validate_token(token):
-            return {"Error": "Invalid Token"}, 403
-        
         out = []
 
         try:
@@ -216,7 +298,9 @@ class CreateWithArray(Resource):
         200: "Success: The requested data was found and returned.",
         404: "Not Found: The requested resource was not found on the server.",
         400: "Bad Request: The request was invalid or cannot be served.",
-        403: "Forbidden: Invalid token or lack of access rights to the requested resource."
+        403: "Forbidden: Invalid token or lack of access rights to the requested resource.",
+        413: "Payload Too Large: The request payload exceeds the maximum size limit.",
+        429: "Too Many Requests: The rate limit for the API has been exceeded."
     },
     params={
         "token": {
@@ -254,14 +338,10 @@ class Dataset(Resource):
         parser.add_argument("token", type=str, help="variable 1", location="args")
         parser.add_argument("page", type=str, help="variable 2", location="args")
         args = parser.parse_args()
-        token = args["token"]
         page = args["page"]
 
         if page is None:
             page = 1
-
-        if not validate_token(token):
-            return {"Error": "Invalid Token"}, 403
         
         try:
             page = int(page)
@@ -326,19 +406,10 @@ class Dataset(Resource):
         token = args["token"]
         dataset_name = args["datasetName"]
 
-        if not validate_token(token):
-            return {"Error": "Invalid Token"}, 403
-        
-        data = {
-            "datasetName": dataset_name,
-            "Ntables": 0,
-            "blocks": 0,
-            "%": 0,
-            "process": None
-        }    
         try:
+            dataset = DatasetModel(mongoDBWrapper, {dataset_name: {}})
+            dataset.store_datasets()
             result = {"message": f"Created dataset {dataset_name}"}, 200
-            dataset_c.insert_one(data)
         except Exception as e:
             result = {"message": f"Dataset {dataset_name} already exist"}, 400
 
@@ -353,11 +424,17 @@ class Dataset(Resource):
         200: "OK - Returns a list of data related to the requested dataset.",
         404: "Not Found - The specified dataset could not be found.",
         400: "Bad Request - The request was invalid. This can be caused by missing or invalid parameters.",
-        403: "Forbidden - Access denied due to invalid token."
+        403: "Forbidden - Access denied due to invalid token.",
+        413: "Payload Too Large - The request payload exceeds the maximum size limit.",
+        429: "Too Many Requests - The rate limit for the API has been exceeded."
     },
     params={ 
         "datasetName": {"description": "The name of the dataset to retrieve.", "type": "string"},
-        "token": {"description": "API key token for authentication.", "type": "string"}
+        "token": {
+            "description": "An API token for authentication and authorization purposes.",
+            "type": "string",
+            "required": True
+        }
     }
 )
 class DatasetID(Resource):
@@ -377,9 +454,6 @@ class DatasetID(Resource):
         args = parser.parse_args()
         token = args["token"]
         dataset_name = datasetName
-
-        if not validate_token(token):
-            return {"Error": "Invalid Token"}, 403
 
         try:    
             results = dataset_c.find({"datasetName": dataset_name})
@@ -413,8 +487,7 @@ class DatasetID(Resource):
         dataset_name = datasetName
         args = parser.parse_args()
         token = args["token"]
-        if not validate_token(token):
-            return {"Error": "Invalid Token"}, 403
+       
         try:
             self._delete_dataset(dataset_name)
             return {"datasetName": datasetName, "deleted": True}, 200     
@@ -442,10 +515,16 @@ class DatasetID(Resource):
         202: "Accepted - The request has been accepted for processing.",
         404: "Not Found - The specified dataset could not be found.",
         400: "Bad Request - There was an error in the request. This might be due to invalid parameters or file format.",
-        403: "Forbidden - Access denied due to invalid token."
+        403: "Forbidden - Access denied due to invalid token.",
+        413: "Payload Too Large - The request payload exceeds the maximum size limit.",
+        429: "Too Many Requests - The rate limit for the API has been exceeded."
     },
     params={ 
-        "token": {"description": "API key token for authentication.", "type": "string"}
+        "token": {
+            "description": "An API token for authentication and authorization purposes.",
+            "type": "string",
+            "required": True
+        }
     }
 )
 class DatasetTable(Resource):
@@ -472,10 +551,7 @@ class DatasetTable(Resource):
         kg_reference = "wikidata"
         if args["kgReference"] is not None:
             kg_reference = args["kgReference"]
-        token = args["token"]
-        if not validate_token(token):
-            return {"Error": "Invalid Token"}, 403
-        
+       
         try:
             args = upload_parser.parse_args()
             uploaded_file = args["file"]  # This is FileStorage instance
@@ -524,10 +600,6 @@ class DatasetTable(Resource):
         parser.add_argument("token", type=str, help="variable 1", location="args")
         args = parser.parse_args()
         page = args["page"]
-        token = args["token"]
-        
-        if not validate_token(token):
-            return {"Error": "Invalid Token"}, 403
         
         try:
             page = int(page)
@@ -569,11 +641,17 @@ class DatasetTable(Resource):
         200: "OK - Successfully retrieved or deleted the specified table.",
         404: "Not Found - The specified table or dataset could not be found.",
         400: "Bad Request - The request was invalid, possibly due to incorrect parameters.",
-        403: "Forbidden - Access denied due to invalid token."
+        403: "Forbidden - Access denied due to invalid token.",
+        413: "Payload Too Large - The request payload exceeds the maximum size limit.",
+        429: "Too Many Requests - The rate limit for the API has been exceeded."
     },
     params={ 
         "page": {"description": "The page number for pagination of table data. Defaults to returning all pages if not specified.", "type": "integer"},
-        "token": {"description": "API key token for authentication.", "type": "string"}
+        "token": {
+            "description": "An API token for authentication and authorization purposes.",
+            "type": "string",
+            "required": True
+        }
     }
 )
 class TableID(Resource):
@@ -593,12 +671,7 @@ class TableID(Resource):
         parser.add_argument("token", type=str, help="variable 1", location="args")
         args = parser.parse_args()
         page = args["page"]
-        token = args["token"]
         
-       
-        if not validate_token(token):
-            return {"Error": "Invalid Token"}, 403
-
         # if page isn't specified, return all pages
         """
         if page is None:
@@ -746,8 +819,6 @@ class TableID(Resource):
         args = parser.parse_args()
         token = args["token"]
        
-        if not validate_token(token):
-            return {"Error": "Invalid Token"}, 403
 
         try:
             self._delete_table(datasetName, tableName)
