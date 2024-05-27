@@ -23,7 +23,9 @@ REDIS_ENDPOINT = os.environ["REDIS_ENDPOINT"]
 REDIS_JOB_DB = int(os.environ["REDIS_JOB_DB"])
 API_TOKEN = os.environ["ALLIGATOR_TOKEN"]
 UNLIMITED_TOKEN = os.environ["ALLIGATOR_TOKEN_SECRET"]
+MAXIMUM_REQUESTS_PER_DAY = os.environ["MAXIMUM_REQUESTS_PER_DAY"]
 MAX_CONTENT_LENGTH = 500 * 1024 * 1024  # 500MB limit
+
 
 # Initialize Redis client and MongoDB wrapper
 job_active = redis.Redis(host=REDIS_ENDPOINT, db=REDIS_JOB_DB)
