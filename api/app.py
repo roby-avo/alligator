@@ -2,6 +2,7 @@ import os
 import logging
 import redis
 import pymongo
+import math
 import traceback
 import geoip2.database
 from flask import Flask, request, jsonify
@@ -25,6 +26,8 @@ API_TOKEN = os.environ["ALLIGATOR_TOKEN"]
 UNLIMITED_TOKEN = os.environ["ALLIGATOR_TOKEN_SECRET"]
 MAXIMUM_REQUESTS_PER_DAY = os.environ["MAXIMUM_REQUESTS_PER_DAY"]
 MAX_CONTENT_LENGTH = 500 * 1024 * 1024  # 500MB limit
+MAX_PER_PAGE = 100  # Define a sensible maximum limit for items per page
+
 
 
 # Initialize Redis client and MongoDB wrapper
@@ -292,15 +295,14 @@ class CreateWithArray(Resource):
         return {"status": "Ok", "tables": out}, 202
    
 
+
 @ds.route("")
 @ds.doc(
     responses={
         200: "Success: The requested data was found and returned.",
         404: "Not Found: The requested resource was not found on the server.",
         400: "Bad Request: The request was invalid or cannot be served.",
-        403: "Forbidden: Invalid token or lack of access rights to the requested resource.",
-        413: "Payload Too Large: The request payload exceeds the maximum size limit.",
-        429: "Too Many Requests: The rate limit for the API has been exceeded."
+        403: "Forbidden: Invalid token or lack of access rights to the requested resource."
     },
     params={
         "token": {
@@ -314,47 +316,54 @@ class CreateWithArray(Resource):
 class Dataset(Resource):
     @ds.doc(
         params={
+            "datasetName": {
+                "description": "The name of the dataset to be created.",
+                "type": "string",
+                "required": True
+            },
             "page": {
                 "description": "The page number for paginated results. If not specified, defaults to 1.",
                 "type": "int",
                 "default": 1
+            },
+            "per_page": {
+                "description": "The number of items per page. If not specified, defaults to 10.",
+                "type": "int",
+                "default": 10
             }
         },
-        description="Retrieve datasets with pagination. Each page contains a subset of datasets."
+        description="Create a new dataset with the specified name."
     )
     def get(self):
-        """
-            Retrieves a paginated list of datasets. It uses the 'page' parameter to return the corresponding subset of datasets.
-            Requires a valid token for authentication.
-
-            Parameters:
-            - token (str): An API token provided in the query string for access authorization.
-            - page (int, optional): The page number for pagination, defaults to 1 if not specified.
-
-            Returns:
-            - A list of dataset summaries with their status and processing information, or an error message with an HTTP status code.
-        """
         parser = reqparse.RequestParser()
-        parser.add_argument("token", type=str, help="variable 1", location="args")
-        parser.add_argument("page", type=str, help="variable 2", location="args")
+        parser.add_argument("token", type=str, help="API token for access", location="args")
+        parser.add_argument("page", type=int, help="Page number for pagination", location="args", default=1)
+        parser.add_argument("per_page", type=int, help="Items per page for pagination", location="args", default=10)
         args = parser.parse_args()
+        token = args["token"]
         page = args["page"]
-
-        if page is None:
-            page = 1
+        per_page = args["per_page"]
         
         try:
-            page = int(page)
-            # Calculate the total number of pages
-            max_page_result = list(dataset_c.aggregate([
-                {"$group": {"_id": None, "max": {"$max": "$page"}}}
-            ]))
-            total_pages = 0
-            if max_page_result:
-                total_pages = max_page_result[0]['max']
-            
-            # Fetch results for the given page
-            results = dataset_c.find({"page": page})
+            page = max(1, int(page))
+            per_page = max(1, min(int(per_page), MAX_PER_PAGE))  # Enforce maximum limit for per_page
+            skip = (page - 1) * per_page
+            total_items = dataset_c.count_documents({})
+            total_pages = math.ceil(total_items / per_page)
+
+            if page > total_pages:
+                return {
+                    "data": [],
+                    "pagination": {
+                        "currentPage": page,
+                        "perPage": per_page,
+                        "totalPages": total_pages,
+                        "totalItems": total_items
+                    },
+                    "message": "Page number exceeds total number of pages."
+                }
+
+            results = dataset_c.find().skip(skip).limit(per_page)
             out = [
                 {
                     "datasetName": result["datasetName"],
@@ -366,12 +375,13 @@ class Dataset(Resource):
                 for result in results
             ]
 
-            # Return both data and pagination info
             return {
                 "data": out,
                 "pagination": {
                     "currentPage": page,
-                    "totalPages": total_pages
+                    "perPage": per_page,
+                    "totalPages": total_pages,
+                    "totalItems": total_items
                 }
             }
         except Exception as e:
@@ -507,6 +517,7 @@ class DatasetID(Resource):
         candidate_scored_c.delete_many(query)
 
 
+
 @ds.route("/<datasetName>/table")
 @ds.doc(
     description="Endpoint for uploading and processing a table within a specified dataset.",
@@ -581,6 +592,11 @@ class DatasetTable(Resource):
                 "description": "The page number for paginated results, default is 1.",
                 "type": "int",
                 "default": 1
+            },
+            "per_page": {
+                "description": "The number of items per page, default is 10.",
+                "type": "int",
+                "default": 10
             }
         },
         description="Retrieve tables within dataset with pagination. Each page contains a subset of tables."
@@ -591,28 +607,41 @@ class DatasetTable(Resource):
             Parameters:
                 datasetName (str): The name of the dataset for which table information is requested.
                 page (int): Page number for paginated results (default is 1).
+                per_page (int): Number of items per page (default is 10).
                 token (str): API token for authentication.
             Returns:
                 List: A list of tables with their information, or an error message in case of failure.
         """
         parser = reqparse.RequestParser()
-        parser.add_argument("page", type=int, help="variable 1", location="args")
-        parser.add_argument("token", type=str, help="variable 1", location="args")
+        parser.add_argument("page", type=int, help="Page number for pagination", location="args", default=1)
+        parser.add_argument("per_page", type=int, help="Items per page for pagination", location="args", default=10)
+        parser.add_argument("token", type=str, help="API token for access", location="args")
         args = parser.parse_args()
         page = args["page"]
+        per_page = args["per_page"]
+        token = args["token"]
         
         try:
-            page = int(page)
-            max_pages_result = list(table_c.aggregate([
-                {"$match": {"datasetName": datasetName}},
-                {"$group": {"_id": None, "max": {"$max": "$page"}}}
-            ]))
-            total_pages = 0       
-            if max_pages_result:
-                total_pages = max_pages_result[0]["max"]
-        
-            query = {"datasetName": datasetName, "page": page}
-            results = table_c.find(query)
+            page = max(1, int(page))
+            per_page = max(1, min(int(per_page), MAX_PER_PAGE))  # Enforce maximum limit for per_page
+            skip = (page - 1) * per_page
+            total_items = table_c.count_documents({"datasetName": datasetName})
+            total_pages = math.ceil(total_items / per_page)
+            
+            if page > total_pages:
+                return {
+                    "data": [],
+                    "pagination": {
+                        "currentPage": page,
+                        "perPage": per_page,
+                        "totalPages": total_pages,
+                        "totalItems": total_items
+                    },
+                    "message": "Page number exceeds total number of pages."
+                }, 200
+
+            query = {"datasetName": datasetName}
+            results = table_c.find(query).skip(skip).limit(per_page)
             out = []
             for result in results:
                 out.append({
@@ -626,12 +655,14 @@ class DatasetTable(Resource):
                 "data": out,
                 "pagination": {
                     "currentPage": page,
-                    "totalPages": total_pages
+                    "perPage": per_page,
+                    "totalPages": total_pages,
+                    "totalItems": total_items
                 }
             }, 200
         except Exception as e:
             print({"traceback": traceback.format_exc()}, flush=True)
-            return {"status": "Error", "message": str(e)}, 400        
+            return {"status": "Error", "message": str(e)}, 400  
 
        
 @ds.route("/<datasetName>/table/<tableName>")
@@ -646,7 +677,6 @@ class DatasetTable(Resource):
         429: "Too Many Requests - The rate limit for the API has been exceeded."
     },
     params={ 
-        "page": {"description": "The page number for pagination of table data. Defaults to returning all pages if not specified.", "type": "integer"},
         "token": {
             "description": "An API token for authentication and authorization purposes.",
             "type": "string",
@@ -655,6 +685,21 @@ class DatasetTable(Resource):
     }
 )
 class TableID(Resource):
+    @ds.doc(
+        params={
+            "page": {
+                "description": "The page number for paginated results, default is 1.",
+                "type": "int",
+                "default": 1
+            },
+            "per_page": {
+                "description": "The number of items per page, default is 10.",
+                "type": "int",
+                "default": 10
+            }
+        },
+        description="Retrieve tables within dataset with pagination. Each page contains a subset of tables."
+    )
     def get(self, datasetName, tableName):
         """
             Retrieves a specific table from a dataset based on the dataset and table names.
@@ -667,33 +712,40 @@ class TableID(Resource):
                 Dict: A dictionary containing the requested table data, or an error message in case of failure.
         """
         parser = reqparse.RequestParser()
-        parser.add_argument("page", type=int, help="variable 1", location="args")
+        parser.add_argument("page", type=int, help="Page number for pagination", location="args", default=1)
+        parser.add_argument("per_page", type=int, help="Items per page for pagination", location="args", default=10)
         parser.add_argument("token", type=str, help="variable 1", location="args")
         args = parser.parse_args()
         page = args["page"]
+        per_page = args["per_page"]
+        token = args["token"]
         
-        # if page isn't specified, return all pages
-        """
-        if page is None:
-            page = 1
-        """
-        # will have to change in the future 
-        
+        query = {"datasetName": datasetName, "tableName": tableName}
+        page = max(1, int(page))
+        per_page = max(1, min(int(per_page), MAX_PER_PAGE))  # Enforce maximum limit for per_page
+        skip = (page - 1) * per_page
+        total_items = cea_c.count_documents(query)
+        total_pages = math.ceil(total_items / per_page)
+        is_cea_available = True
+
+        if total_items == 0:
+            per_page = 1
+            total_pages = row_c.count_documents(query)
+            total_items = total_pages
+            is_cea_available = False
+
         try:
-            if page is not None:
-                page = int(page)
-            out, total_pages = self._get_table(datasetName, tableName, page)
+            out = self._get_table(query, skip, per_page, is_cea_available)
             out = self._replace_nan_with_none(out)  # Replace NaN with None in the output
-            if page is not None:
-                return {
-                    "data": out,
-                    "pagination": {
-                        "currentPage": page,
-                        "totalPages": total_pages
-                    }
-                }, 200
-            else:
-                return out, 200
+            return {
+                "data": out,
+                "pagination": {
+                    "currentPage": page,
+                    "perPage": per_page,
+                    "totalPages": total_pages,
+                    "totalItems": total_items
+                }
+            }, 200
         except Exception as e:
             print({"traceback": traceback.format_exc()}, flush=True)
             return {"status": "Error", "message": str(e)}, 404
@@ -711,56 +763,45 @@ class TableID(Resource):
             return [self._replace_nan_with_none(v) for v in value]
         return value
     
-    def _get_table(self, dataset_name, table_name, page=None):
-        query = {"datasetName": dataset_name, "tableName": table_name}
-        max_pages_result = list(row_c.aggregate([
-            {"$match": query},
-            {"$group": {"_id": None, "max": {"$max": "$page"}}}
-        ]))
-        total_pages = 0
-        if max_pages_result:
-            total_pages = max_pages_result[0]["max"]
-      
-        if page is not None:
-            query["page"] = page
-
-        results = row_c.find(query)
-        out = [
-            {
+    def _get_table(self, query, skip, per_page, is_cea_available=False):
+        status = table_c.find_one(query).get("status")
+        if not is_cea_available:
+            result = row_c.find(query).skip(skip).limit(per_page)
+            result = list(result)
+            if len(result) > 0:
+                result = result[0]
+            out = {
+                    "datasetName": result["datasetName"],
+                    "tableName": result["tableName"],
+                    "header": result["header"],
+                    "rows": result["rows"],
+                    "semanticAnnotations": {"cea": [], "cpa": [], "cta": []},
+                    "metadata": result.get("metadata", []),
+                    "status": status
+            }
+            return out
+        else:
+            result = row_c.find_one(query)
+            object = {
                 "datasetName": result["datasetName"],
                 "tableName": result["tableName"],
                 "header": result["header"],
-                "rows": result["rows"],
+                "rows": [],
                 "semanticAnnotations": {"cea": [], "cpa": [], "cta": []},
                 "metadata": result.get("metadata", []),
-                "status": result["status"]
+                "status": status
             }
-            for result in results
-        ]
-
-        if len(out) == 0:
-            return [], total_pages   
-        
-        buffer = out[0]
-        for o in out[1:]:
-            buffer["rows"] += o["rows"]
-        buffer["nrows"] = len(buffer["rows"])
-
-        if len(out) > 0:
-            if page is None:
-                out = buffer
-            else:
-                out = out[0]
-            doing = True
-            results = cea_c.find(query)
-            total = cea_c.count_documents(query)
-            if total == len(out["rows"]):
-                doing = False
+             
+            results = cea_c.find(query).skip(skip).limit(per_page)
             for result in results:
+                object["rows"].append({
+                    "idRow": result["row"],
+                    "data": result["data"]
+                })
                 winning_candidates = result["winningCandidates"]
                 for id_col, candidates in enumerate(winning_candidates):
                     entities = []
-                    for candidate in candidates[0:3]:
+                    for candidate in candidates:
                         entities.append({
                             "id": candidate["id"],
                             "name": candidate["name"],
@@ -776,18 +817,18 @@ class TableID(Resource):
                                 {"id":"popularity", "value": candidate["features"].get("popularity")}
                             ]
                         })
-                    out["semanticAnnotations"]["cea"].append({
+                    object["semanticAnnotations"]["cea"].append({
                         "idColumn": id_col,
                         "idRow": result["row"],
                         "entity": entities
                     })
-            out["status"] = "DONE" if doing is False else "DOING"        
+                
             result = cpa_c.find_one(query)
             if result is not None:
                 winning_predicates = result["cpa"]
                 for id_source_column in winning_predicates:
                     for id_target_column in winning_predicates[id_source_column]:
-                        out["semanticAnnotations"]["cpa"].append({
+                        object["semanticAnnotations"]["cpa"].append({
                             "idSourceColumn": id_source_column,
                             "idTargetColumn": id_target_column,
                             "predicate": winning_predicates[id_source_column][id_target_column]
@@ -797,11 +838,11 @@ class TableID(Resource):
             if result is not None:
                 winning_types = result["cta"]
                 for id_col in winning_types:
-                    out["semanticAnnotations"]["cta"].append({
+                    object["semanticAnnotations"]["cta"].append({
                         "idColumn": int(id_col),
                         "types": [winning_types[id_col]]
                     })            
-        return out, total_pages
+            return object
     
     
     def delete(self, datasetName, tableName):
