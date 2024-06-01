@@ -737,8 +737,8 @@ class TableID(Resource):
         if column is not None and sort is not None:
             # Define query for sorting by column
             new_query = {
-                'datasetName': 'Dataset1',
-                'tableName': 'Test1',
+                'datasetName': datasetName,
+                'tableName': tableName,
                 '$expr': {
                     '$gt': [
                         {'$size': {'$arrayElemAt': ['$winningCandidates', column]}},
@@ -891,7 +891,7 @@ class TableID(Resource):
             },
             { 
                 '$sort': { 
-                    f"winningCandidates.{column}.0.rho'": 1 
+                    f"winningCandidates.{column}.0.rho'": sort_type
                 } 
             },
             { 
