@@ -316,11 +316,6 @@ class CreateWithArray(Resource):
 class Dataset(Resource):
     @ds.doc(
         params={
-            "datasetName": {
-                "description": "The name of the dataset to be created.",
-                "type": "string",
-                "required": True
-            },
             "page": {
                 "description": "The page number for paginated results. If not specified, defaults to 1.",
                 "type": "int",
