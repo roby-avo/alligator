@@ -696,6 +696,16 @@ class TableID(Resource):
                 "description": "The number of items per page, default is 10.",
                 "type": "int",
                 "default": 10
+            },
+            "column": {
+                "description": "The column number which to sort the table data by.",
+                "type": "int",
+                "default": None
+            },
+            "sort": {
+                "description": "The sorting order for the table data.",
+                "type": "string",
+                "default": None
             }
         },
         description="Retrieve tables within dataset with pagination. Each page contains a subset of tables."
@@ -714,17 +724,37 @@ class TableID(Resource):
         parser = reqparse.RequestParser()
         parser.add_argument("page", type=int, help="Page number for pagination", location="args", default=1)
         parser.add_argument("per_page", type=int, help="Items per page for pagination", location="args", default=10)
+        parser.add_argument("column", type=int, help="Column number for sorting", location="args", default=None)
+        parser.add_argument("sort", type=str, help="Sorting order for table data", location="args", default=None)
         parser.add_argument("token", type=str, help="variable 1", location="args")
         args = parser.parse_args()
         page = args["page"]
         per_page = args["per_page"]
+        column = args["column"]
+        sort = args["sort"]
         token = args["token"]
         
         query = {"datasetName": datasetName, "tableName": tableName}
         page = max(1, int(page))
         per_page = max(1, min(int(per_page), MAX_PER_PAGE))  # Enforce maximum limit for per_page
         skip = (page - 1) * per_page
-        total_items = cea_c.count_documents(query)
+
+        if column is not None and sort is not None:
+            # Define query for sorting by column
+            new_query = {
+                'datasetName': 'Dataset1',
+                'tableName': 'Test1',
+                '$expr': {
+                    '$gt': [
+                        {'$size': {'$arrayElemAt': ['$winningCandidates', column]}},
+                        0
+                    ]
+                }
+            }
+            total_items = cea_c.count_documents(new_query)
+        else:    
+            total_items = cea_c.count_documents(query)
+       
         total_pages = math.ceil(total_items / per_page)
         is_cea_available = True
 
@@ -735,7 +765,7 @@ class TableID(Resource):
             is_cea_available = False
 
         try:
-            out = self._get_table(query, skip, per_page, is_cea_available)
+            out = self._get_table(query, skip, per_page, is_cea_available, column, sort)
             out = self._replace_nan_with_none(out)  # Replace NaN with None in the output
             return {
                 "data": out,
@@ -763,7 +793,7 @@ class TableID(Resource):
             return [self._replace_nan_with_none(v) for v in value]
         return value
     
-    def _get_table(self, query, skip, per_page, is_cea_available=False):
+    def _get_table(self, query, skip, per_page, is_cea_available=False, column=None, sort=None):
         status = table_c.find_one(query).get("status")
         if not is_cea_available:
             result = row_c.find(query).skip(skip).limit(per_page)
@@ -771,13 +801,13 @@ class TableID(Resource):
             if len(result) > 0:
                 result = result[0]
             out = {
-                    "datasetName": result["datasetName"],
-                    "tableName": result["tableName"],
-                    "header": result["header"],
-                    "rows": result["rows"],
-                    "semanticAnnotations": {"cea": [], "cpa": [], "cta": []},
-                    "metadata": result.get("metadata", []),
-                    "status": status
+                "datasetName": result["datasetName"],
+                "tableName": result["tableName"],
+                "header": result["header"],
+                "rows": result["rows"],
+                "semanticAnnotations": {"cea": [], "cpa": [], "cta": []},
+                "metadata": result.get("metadata", []),
+                "status": status
             }
             return out
         else:
@@ -791,8 +821,14 @@ class TableID(Resource):
                 "metadata": result.get("metadata", []),
                 "status": status
             }
-             
-            results = cea_c.find(query).skip(skip).limit(per_page)
+
+            print("Sorting by column", column, "in", sort, "order", flush=True)
+            if column is not None and sort is not None:
+                print("Sorting by column", column, "in", sort, "order", flush=True)
+                results = self._get_annotations_by_confidence(query, skip, per_page, column, sort)
+            else:
+                results = cea_c.find(query).skip(skip).limit(per_page)
+
             for result in results:
                 object["rows"].append({
                     "idRow": result["row"],
@@ -844,6 +880,35 @@ class TableID(Resource):
                     })            
             return object
     
+
+    def _get_annotations_by_confidence(self, query, skip, per_page, column, sort):
+        sort_type = pymongo.DESCENDING if sort == "desc" else pymongo.ASCENDING
+        # Run the aggregation query with pagination
+        pipeline = [
+            { 
+                '$match': { 
+                    'datasetName': query["datasetName"], 
+                    'tableName': query["tableName"], 
+                    '$expr': { 
+                        '$gt': [{ '$size': { '$arrayElemAt': ['$winningCandidates', 0] } }, 0] 
+                    } 
+                } 
+            },
+            { 
+                '$sort': { 
+                    f"winningCandidates.{column}.0.rho'": 1 
+                } 
+            },
+            { 
+                '$skip': skip
+            },
+            { 
+                '$limit': per_page
+            }
+        ]
+        print("Aggregation pipeline:", pipeline, flush=True)
+        results = cea_c.aggregate(pipeline)
+        return results
     
     def delete(self, datasetName, tableName):
         """
