@@ -755,6 +755,7 @@ class TableID(Resource):
 
         if total_items == 0:
             per_page = 1
+            skip = (page - 1) * per_page
             total_pages = row_c.count_documents(query)
             total_items = total_pages
             is_cea_available = False
@@ -791,6 +792,7 @@ class TableID(Resource):
     def _get_table(self, query, skip, per_page, is_cea_available=False, column=None, sort=None):
         status = table_c.find_one(query).get("status")
         if not is_cea_available:
+            print(skip, per_page, query, flush=True)
             result = row_c.find(query).skip(skip).limit(per_page)
             result = list(result)
             if len(result) > 0:
