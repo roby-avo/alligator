@@ -887,7 +887,7 @@ class TableID(Resource):
                     'datasetName': query["datasetName"], 
                     'tableName': query["tableName"], 
                     '$expr': { 
-                        '$gt': [{ '$size': { '$arrayElemAt': ['$winningCandidates', 0] } }, 0] 
+                        '$gt': [{ '$size': { '$arrayElemAt': ['$winningCandidates', column] } }, 0] 
                     } 
                 } 
             },
