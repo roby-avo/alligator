@@ -557,7 +557,7 @@ class DatasetTable(Resource):
         kg_reference = "wikidata"
         if args["kgReference"] is not None:
             kg_reference = args["kgReference"]
-       
+
         try:
             args = upload_parser.parse_args()
             uploaded_file = args["file"]  # This is FileStorage instance
@@ -575,7 +575,7 @@ class DatasetTable(Resource):
             out = [{"id": str(table["_id"]),  "datasetName": table["datasetName"], "tableName": table["tableName"]} for table in tables]
             return {"status": "Ok", "tables": out}, 202
         except pymongo.errors.DuplicateKeyError as e:
-            pass
+            return {"status": "Ok", "tables": out}, 202
             #print({"traceback": traceback.format_exc()}, flush=True)       
         except Exception as e:
             return {"status": "Error", "message": str(e), "traceback": traceback.format_exc()}, 400
