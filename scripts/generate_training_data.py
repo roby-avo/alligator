@@ -5,7 +5,6 @@ import argparse
 import argcomplete
 import utils as utils
 from tqdm import tqdm
-from pymongo import MongoClient
 from api.process.wrapper.Database import MongoDBWrapper  # MongoDB database wrapper
 
 # Function to fetch dataset names from MongoDB
