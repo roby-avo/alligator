@@ -23,30 +23,29 @@ def parse_cea(cea_path):
         for chunk in tqdm(pd.read_csv(cea_path, header=None, chunksize=10000, dtype={0: str, 1: int, 2: int, 3: str}), total=total_lines//10000 + 1, desc="Parsing CEA"):
             for index, row in chunk.iterrows():
                 key = f"{row[0]}-{row[1]}-{row[2]}"
-                qids = row[3].split() # Clean QIDs
-                qids = [qid.split('/')[-1] for qid in qids] # Extract QIDs
+                qids = row[3].split()  # Extract QIDs
+                qids = [qid.split('/')[-1] for qid in qids]  # Clean QIDs
                 if key not in cea_gt:
                     cea_gt[key] = []
-                cea_gt[key].append(qids)
+                cea_gt[key].extend(qids)
     return cea_gt
 
 # Function to generate samples from candidates
 def get_samples(candidates, cea_gt, table_name, group, key):
     samples = []
     for candidate in candidates:
-        features = {feature: round(candidate["features"][feature], 3) for feature in candidate["features"]}
-        if candidate["id"] in cea_gt:
-            sample = dict(**{"tableName": table_name, "key": key}, **features, **{"group": group, "target": 1})
-            samples.append(sample)
-    
-    for candidate in candidates:
-        features = {feature: round(candidate["features"][feature], 3) for feature in candidate["features"]}
-        if candidate["id"] not in cea_gt:
-            sample = dict(**{"tableName": table_name, "key": key}, **features, **{"group": group, "target": 0})
-            samples.append(sample)
-        if len(samples) == 10:
-            break
-    
+        sample = {
+            "tableName": table_name,
+            "key": key,
+            "id": candidate["id"],
+            "name": candidate.get("name", ""),
+            "description": candidate.get("description", ""),
+            "types": candidate.get("types", []),
+            "group": group,
+            "target": 1 if candidate["id"] in cea_gt else 0
+        }
+        samples.append(sample)
+
     return samples
 
 # Function to generate training datasets
