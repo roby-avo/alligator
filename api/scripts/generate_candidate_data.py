@@ -4,7 +4,7 @@ import pandas as pd
 import argparse
 import argcomplete
 from tqdm import tqdm
-from api.process.wrapper.Database import MongoDBWrapper  # MongoDB database wrapper
+from process.wrapper.Database import MongoDBWrapper  # MongoDB database wrapper
 
 # Function to fetch dataset names from MongoDB
 def fetch_db_datasets():
