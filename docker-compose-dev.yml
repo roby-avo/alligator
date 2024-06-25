@@ -54,3 +54,4 @@ services:
       - ./api:/home/jovyan/work/api
       - ~/my-data:/home/jovyan/work/my-data
       - ~/my-data:/data/my-data
+      - ./scripts:/home/jovyan/work/scripts  # Added volume for scripts
