@@ -4,6 +4,12 @@ import pandas as pd
 import argparse
 import argcomplete
 from tqdm import tqdm
+
+# Dynamically add the project's root directory to PYTHONPATH
+currentdir = os.path.dirname(os.path.abspath(__file__))
+parentdir = os.path.dirname(currentdir)
+sys.path.append(parentdir)
+
 from api.process.wrapper.Database import MongoDBWrapper  # MongoDB database wrapper
 
 # Function to fetch dataset names from MongoDB
