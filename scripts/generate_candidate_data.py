@@ -53,6 +53,14 @@ def get_samples(candidates, cea_gt, table_name, group, key):
 
     return samples
 
+# Function to search for the correct CEA file
+def find_cea_file(base_dir, dataset_name):
+    for root, dirs, files in os.walk(os.path.join(base_dir, dataset_name)):
+        for file in files:
+            if "cea" in file and "target" not in file:
+                return os.path.join(root, file)
+    return None
+
 # Function to generate training datasets
 def generate_training_dataset(datasets, base_dir, export_path="data/training/", buffer_size=1000):
     if not os.path.exists(export_path):
@@ -65,7 +73,11 @@ def generate_training_dataset(datasets, base_dir, export_path="data/training/", 
         cea_c = mongoDBWrapper.get_collection("candidateScored")
         for id_dataset in datasets:
             tables_path = os.path.join(base_dir, datasets[id_dataset]['tables'])
-            cea_target_path = os.path.join(base_dir, datasets[id_dataset]['cea'])
+            cea_target_path = find_cea_file(base_dir, id_dataset)
+            if not cea_target_path:
+                print(f"No valid CEA file found for dataset '{id_dataset}'.")
+                continue
+
             cea_gt = parse_cea(cea_target_path)
             path = os.path.join(export_path, f"{id_dataset}.csv")
             buffer = []
@@ -126,8 +138,7 @@ def main():
     datasets = {}
     for dataset_name in args.datasets:
         datasets[dataset_name] = {
-            "tables": f"{dataset_name}/tables",
-            "cea": f"{dataset_name}/gt/cea.csv"
+            "tables": f"{dataset_name}/tables"
         }
 
     generate_training_dataset(datasets, base_dir=args.base_dir, export_path=args.export_path, buffer_size=args.buffer_size)
