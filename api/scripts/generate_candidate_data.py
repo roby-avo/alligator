@@ -3,7 +3,6 @@ import os
 import pandas as pd
 import argparse
 import argcomplete
-import utils as utils
 from tqdm import tqdm
 from api.process.wrapper.Database import MongoDBWrapper  # MongoDB database wrapper
 
