@@ -23,7 +23,8 @@ class LamAPI():
     async def __to_format(self, response):
         try:
             result = await response.json()
-            result = result | []
+            if result is None:
+                result = []   
             return result
         except aiohttp.ContentTypeError:
             return {"error": "Invalid JSON response"}
