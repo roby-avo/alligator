@@ -33,8 +33,6 @@ class Lookup:
         for i, cell in enumerate(cells):
             if i in self._target["NE"]:
                 types = self._types.get(str(i))
-                description = " ".join(list(set(cells_as_strings) - set([cell]))) # unused
-
                 if cell in self._cache:
                     candidates = self._cache.get(cell, [])
                 else:
