@@ -10,6 +10,9 @@ class Cell:
         self.is_notag_cell = is_notag_cell
         self.datatype = datatype
         self._candidates = []
+        if candidates is None:
+            print("candidates is None", content, flush=True)
+        candidates = candidates if candidates is not None else []
         candidates_dict = {}
         
         for candidate in candidates:
