@@ -64,7 +64,7 @@ class Lookup:
                 'stackTrace': traceback.format_exc(),
                 'result': candidates
             })
-            return []
+        return []
     
     def get_rows(self):
         return self._rows
