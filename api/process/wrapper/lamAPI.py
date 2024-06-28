@@ -1,3 +1,4 @@
+import os
 import aiohttp
 import asyncio
 import traceback
@@ -9,25 +10,34 @@ headers = {
     'accept': 'application/json'
 }
 
+LAMAPI_TOKEN = os.environ["LAMAPI_TOKEN"]
+
 
 class LamAPI():
-    def __init__(self, host, client_key, database, response_format="json", kg="wikidata", max_concurrent_requests=50) -> None:
+    def __init__(self, LAMAPI_HOST, client_key, database, response_format="json", kg="wikidata", max_concurrent_requests=50) -> None:
         self.format = response_format
         self.database = database
-        self._url = URLs(host, response_format=response_format)
+        base_url = LAMAPI_HOST
+        self._url = URLs(base_url, response_format=response_format)
         self.client_key = client_key
         self.kg = kg
         # Initialize the semaphore with the max_concurrent_requests limit
         self.semaphore = asyncio.Semaphore(max_concurrent_requests)
 
     async def __to_format(self, response):
-        try:
-            result = await response.json()
-            return result
-        except aiohttp.ContentTypeError:
-            return {"error": "Invalid JSON response"}
-        except Exception as e:
-            return {"error": str(e)}
+        content_type = response.headers.get('Content-Type', '')
+        if 'application/json' in content_type:
+            if self.format == "json":
+                result_json = await response.json()
+                if result_json:
+                    return result_json
+                if result_json is None:    
+                    result_json = {}
+                return result_json  # If none of the keys are found, return the original JSON data
+            else:
+                raise Exception("Sorry, Invalid format!")
+        
+        return {}
 
     async def __submit_get(self, url, params):
         try:
@@ -96,9 +106,7 @@ class LamAPI():
         params = {
             'token': self.client_key
         }
-        result =  await self.__submit_post(self._url.column_analysis_url(), params, json_data)
-        result = result if result is not None else []
-        return result
+        return await self.__submit_post(self._url.column_analysis_url(), params, json_data)
 
     async def labels(self, entities):
         params = {
@@ -108,9 +116,7 @@ class LamAPI():
         json_data = {
             'json': entities
         }
-        result = await self.__submit_post(self._url.entities_labels(), params, json_data)
-        result = result if result is not None else {}
-        return result
+        return await self.__submit_post(self._url.entities_labels(), params, json_data)
 
     async def objects(self, entities):
         params = {
@@ -120,10 +126,8 @@ class LamAPI():
         json_data = {
             'json': entities
         }
-        result = await self.__submit_post(self._url.entities_objects_url(), params, json_data)
-        result = result if result is not None else {}
-        return result
-    
+        return await self.__submit_post(self._url.entities_objects_url(), params, json_data)
+
     async def predicates(self, entities):
         params = {
             'token': self.client_key,
@@ -132,9 +136,7 @@ class LamAPI():
         json_data = {
             'json': entities
         }
-        result = await self.__submit_post(self._url.entities_predicates_url(), params, json_data)
-        result = result if result is not None else {}
-        return result
+        return await self.__submit_post(self._url.entities_predicates_url(), params, json_data)
 
     async def types(self, entities):
         params = {
@@ -144,8 +146,7 @@ class LamAPI():
         json_data = {
             'json': entities
         }
-        result = await self.__submit_post(self._url.entities_types_url(), params, json_data)
-        result = result if result is not None else {}
+        return await self.__submit_post(self._url.entities_types_url(), params, json_data)
 
     async def literals(self, entities):
         params = {
@@ -155,9 +156,7 @@ class LamAPI():
         json_data = {
             'json': entities
         }
-        result = await self.__submit_post(self._url.entities_literals_url(), params, json_data)
-        result = result if result is not None else {}
-        return result
+        return await self.__submit_post(self._url.entities_literals_url(), params, json_data)
 
     async def lookup(self, string, fuzzy=False, types=None, limit=1000, ids=None, kind=None, NERtype=None, language=None, query=None):
         # Convert boolean values to strings
@@ -183,6 +182,5 @@ class LamAPI():
         params = {k: v for k, v in params.items() if v}
 
         result = await self.__submit_get(self._url.lookup_url(), params)
-        result = result if result is not None else []
         return result
     
