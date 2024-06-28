@@ -11,26 +11,6 @@ class FeauturesExtraction:
         self._lock_obj = asyncio.Lock()  # Lock for cache_obj
         self._lock_lit = asyncio.Lock()  # Lock for cache_lit
         
-
-    # async def compute_feautures(self):
-    #     for row in self._rows:
-    #         ne_cells = row.get_ne_cells()
-    #         lit_cells = row.get_lit_cells()
-    #         cells = row.get_cells()
-    #         tasks = []
-    #         for ne_cell in ne_cells:
-    #             for cell in cells:
-    #                 if cell == ne_cell:
-    #                     continue
-    #                 elif cell.is_lit_cell:
-    #                     tasks.append(asyncio.create_task(self._match_lit_cells(ne_cell, cell, row, len(lit_cells))))
-    #                     #self._match_lit_cells(ne_cell, cell, row, len(lit_cells))
-    #                 else:
-    #                     tasks.append(asyncio.create_task(self._compute_similarity_between_ne_cells(ne_cell, cell, len(ne_cells))))
-    #                     #self._compute_similarity_between_ne_cells(ne_cell, cell, len(ne_cells))
-    #         await asyncio.gather(*tasks)    
-    #     return self._extract_features()
-        
     async def compute_feautures(self):
         tasks = []
         for row in self._rows:
@@ -51,12 +31,9 @@ class FeauturesExtraction:
                     continue
                 elif cell.is_lit_cell:
                     await self._match_lit_cells(ne_cell, cell, row, len(lit_cells))
-                    #tasks.append(asyncio.create_task(self._match_lit_cells(ne_cell, cell, row, len(lit_cells))))
                 else:
                     await self._compute_similarity_between_ne_cells(ne_cell, cell, len(ne_cells))
-                    #tasks.append(asyncio.create_task(self._compute_similarity_between_ne_cells(ne_cell, cell, len(ne_cells))))
-        #await asyncio.gather(*tasks)                         
-
+                            
     def _extract_features(self):
         features = [[] for _ in range(len(self._rows[0]))]
         for row in self._rows:
@@ -64,7 +41,6 @@ class FeauturesExtraction:
                 for candidate in cell.candidates():
                     features[cell._id_col].append(list(candidate["features"].values()))
         return features    
-
 
     async def _compute_similarity_between_ne_cells(self, subj_cell, obj_cell, nNE_cells):
         async with self._lamAPI.semaphore:

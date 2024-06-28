@@ -33,7 +33,6 @@ class Cell:
                 "ed_score": candidate["ed_score"],
                 "jaccard_score": candidate["jaccard_score"],
                 "jaccardNgram_score": candidate["jaccardNgram_score"],
-                #"cosine_similarity": candidate["cosine_similarity"], deprecated
                 "p_subj_ne": 0,
                 "p_subj_lit_datatype": 0,
                 "p_subj_lit_all_datatype": 0,
