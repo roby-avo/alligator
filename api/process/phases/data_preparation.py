@@ -35,7 +35,6 @@ class DataPreparation:
                 columns_data[id_col].append(str(cell))
         
         metadata = await self._lamAPI.column_analysis(columns_data)
-        print("metadata", metadata, flush=True)
         first_NE_column = False  
         for id_col in metadata:
             lit_datatype = None
