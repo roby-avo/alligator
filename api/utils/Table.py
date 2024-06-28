@@ -86,7 +86,7 @@ class TableModel:
             "target": {},
             "status": "TODO",
             "state": "READY",
-            "candidateSize": 100,
+            "candidateSize": 1000,
             "page": 1
         }
 

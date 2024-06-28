@@ -147,7 +147,7 @@ class LamAPI():
         }
         return await self.__submit_post(self._url.entities_literals_url(), params, json_data)
 
-    async def lookup(self, string, fuzzy=False, types=None, limit=100, ids=None, kind=None, NERtype=None, language=None, query=None):
+    async def lookup(self, string, fuzzy=False, types=None, limit=1000, ids=None, kind=None, NERtype=None, language=None, query=None):
         # Convert boolean values to strings
         fuzzy_str = 'true' if fuzzy else 'false'
         types_str = ' '.join(types) if types is not None else ''
