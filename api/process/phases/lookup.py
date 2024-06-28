@@ -49,16 +49,12 @@ class Lookup:
                 row.add_notag_cell(cell, i)
         return row
 
-    
     async def _get_candidates(self, cell, id_row, types):
         candidates = []
-        result = None
         try:
             if len(str(cell)) > 0 and str(cell).lower() != "nan":
-                result = await self._lamAPI.lookup(cell, limit=100)
-                if cell not in result:
-                    raise Exception("Error from lamAPI")
-                candidates = result[cell]    
+                candidates = await self._lamAPI.lookup(cell, limit=1000)
+                return candidates
         except Exception as e:
             self._log_c.insert_one({
                 'datasetName': self._dataset_name,
@@ -68,12 +64,9 @@ class Lookup:
                 'types': types,
                 'error': str(e), 
                 'stackTrace': traceback.format_exc(),
-                'result': result
+                'result': candidates
             })
             return []
-            
-        return candidates
-
     
     def get_rows(self):
         return self._rows
