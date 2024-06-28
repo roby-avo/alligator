@@ -24,7 +24,7 @@ class LamAPI():
         try:
             result = await response.json()
             if result is None:
-                result = []   
+                result = {}
             return result
         except aiohttp.ContentTypeError:
             return {"error": "Invalid JSON response"}
