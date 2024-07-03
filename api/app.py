@@ -885,18 +885,12 @@ class TableID(Resource):
             { 
                 '$match': { 
                     'datasetName': query["datasetName"], 
-                    'tableName': query["tableName"], 
-                    '$expr': { 
-                        '$and': [
-                            {'$eq': [{'$type': {'$arrayElemAt': ['$winningCandidates', column]}}, 'array']},
-                            {'$gt': [{'$size': {'$arrayElemAt': ['$winningCandidates', column]}}, 0]}
-                        ]
-                    } 
+                    'tableName': query["tableName"]
                 } 
             },
             { 
                 '$sort': { 
-                    f"winningCandidates.{column}.0.rho'": sort_type
+                    f"scores.{column}": sort_type
                 } 
             },
             { 
@@ -906,7 +900,6 @@ class TableID(Resource):
                 '$limit': per_page
             }
         ]
-        print("Aggregation pipeline:", pipeline, flush=True)
         results = cea_c.aggregate(pipeline)
         return results
     
