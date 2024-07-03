@@ -33,15 +33,16 @@ class Decision:
     def store_cea_and_candidates_scored_data(self):
         cea_data = []
         candidates_scored_data = []
-        
         for row in self._rows:
             winning_candidates =  []
             cea = {}
             rankend_candidates = []
+            scores = []
             for cell in row.get_cells():
                 candidates = cell.candidates()
                 wc = []
                 rank = candidates[0:20] if len(candidates) > 0 else []
+                score = None
                 if len(candidates) > 0:
                     if len(candidates) > 1:
                         candidates[0]["delta"] = round(candidates[0]["rho'"] - candidates[1]["rho'"], 3)
@@ -49,6 +50,7 @@ class Decision:
                         candidates[0]["delta"] = 1   
                     candidates[0]["score"] = round((1-K) * candidates[0]["rho'"] + K * candidates[0]["delta"], 3)
                     wc.append(candidates[0])
+                    score = candidates[0]["rho'"]
                 
                 if len(wc) == 1:
                     cea[str(cell._id_col)] = wc[0]["id"]
@@ -60,6 +62,7 @@ class Decision:
 
                 winning_candidates.append(wc)
                 rankend_candidates.append(rank)
+                scores.append(score)
 
             cea_data.append({
                 "datasetName": self._dataset_name,
@@ -69,7 +72,8 @@ class Decision:
                 "winningCandidates": winning_candidates,
                 "cea": cea,
                 "kgReference": self._kg_reference,
-                "page": self._page
+                "page": self._page,
+                "scores": scores
             })
 
             candidates_scored_data.append({
