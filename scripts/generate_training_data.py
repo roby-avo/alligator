@@ -2,7 +2,6 @@ import sys
 import os
 import pandas as pd
 import argparse
-import utils as utils
 from tqdm import tqdm
 
 # Dynamically add the project's root directory to PYTHONPATH
