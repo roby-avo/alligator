@@ -26,7 +26,7 @@ def parse_cea(cea_path):
     if os.path.exists(cea_path):
         total_lines = sum(1 for _ in open(cea_path))
         for chunk in tqdm(pd.read_csv(cea_path, header=None, chunksize=10000, dtype={0: str, 1: int, 2: int, 3: str}), total=total_lines//10000 + 1, desc="Parsing CEA"):
-            for index, row in chunk.iterrows():
+            for _, row in chunk.iterrows():
                 key = f"{row[0]}-{row[1]}-{row[2]}"
                 qids = row[3].split()  # Extract QIDs
                 qids = [qid.split('/')[-1] for qid in qids]  # Clean QIDs
