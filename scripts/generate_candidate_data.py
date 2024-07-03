@@ -2,7 +2,6 @@ import sys
 import os
 import pandas as pd
 import argparse
-import argcomplete
 from tqdm import tqdm
 
 # Dynamically add the project's root directory to PYTHONPATH
@@ -122,7 +121,6 @@ def main():
     parser.add_argument('--buffer_size', type=int, default=1000, help='Buffer size for writing to CSV')
     parser.add_argument('--list_datasets', action='store_true', help='List available datasets in the database')
     
-    argcomplete.autocomplete(parser)
     args = parser.parse_args()
 
     if args.list_datasets:
