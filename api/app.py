@@ -418,7 +418,7 @@ class Dataset(Resource):
             # Assuming you want to return dataset details such as ID and creation time
             created_dataset = {
                 "name": dataset_name,
-                "created_at": dataset.created_at.isoformat()  # Assuming `dataset` has a `created_at` attribute
+                "created_at": datetime.now().isoformat()
             }
             
             result = {
