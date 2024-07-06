@@ -414,16 +414,9 @@ class Dataset(Resource):
         try:
             dataset = DatasetModel(mongoDBWrapper, {dataset_name: {}})
             dataset.store_datasets()
-            
-            # Assuming you want to return dataset details such as ID and creation time
-            created_dataset = {
-                "name": dataset_name,
-                "created_at": datetime.now().isoformat()
-            }
-            
             result = {
                 "success": True,
-                "data": created_dataset,
+                "datasetName": dataset_name,
                 "message": f"Created dataset {dataset_name}"
             }, 200
         except Exception as e:
