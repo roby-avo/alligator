@@ -405,8 +405,8 @@ class Dataset(Resource):
             - A confirmation message with the status of the dataset creation, or an error message with an HTTP status code.
         """
         parser = reqparse.RequestParser()
-        parser.add_argument("token", type=str, help="variable 1", location="args")
-        parser.add_argument("datasetName", type=str, help="variable 2", location="args")
+        parser.add_argument("token", type=str, help="API token for access authorization", location="args")
+        parser.add_argument("datasetName", type=str, help="The name of the new dataset to be created", location="args")
         args = parser.parse_args()
         token = args["token"]
         dataset_name = args["datasetName"]
@@ -414,12 +414,26 @@ class Dataset(Resource):
         try:
             dataset = DatasetModel(mongoDBWrapper, {dataset_name: {}})
             dataset.store_datasets()
-            result = {"message": f"Created dataset {dataset_name}"}, 200
+            
+            # Assuming you want to return dataset details such as ID and creation time
+            created_dataset = {
+                "id": str(dataset.id),  # Assuming `dataset` has an `id` attribute
+                "name": dataset_name,
+                "created_at": dataset.created_at.isoformat()  # Assuming `dataset` has a `created_at` attribute
+            }
+            
+            result = {
+                "success": True,
+                "data": created_dataset,
+                "message": f"Created dataset {dataset_name}"
+            }, 200
         except Exception as e:
-            result = {"message": f"Dataset {dataset_name} already exist"}, 400
+            result = {
+                "success": False,
+                "message": f"Dataset {dataset_name} already exists"
+            }, 400
 
         return result
-
 
    
 @ds.route("/<datasetName>")
