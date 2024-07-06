@@ -31,7 +31,7 @@ def parse_cea(cea_path):
                 qids = [qid.split('/')[-1] for qid in qids] # Extract QIDs
                 if key not in cea_gt:
                     cea_gt[key] = []
-                cea_gt[key].append(qids)
+                cea_gt[key] = qids
     return cea_gt
 
 # Function to generate samples from candidates
