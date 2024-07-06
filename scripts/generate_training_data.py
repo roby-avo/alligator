@@ -39,14 +39,14 @@ def get_samples(candidates, cea_gt, table_name, group, key):
     samples = []
     for candidate in candidates:
         features = {feature: round(candidate["features"][feature], 3) for feature in candidate["features"]}
-        if candidate["id"] in cea_gt[key]:
+        if candidate["id"] in cea_gt:
             sample = dict(**{"tableName": table_name, "key": key, "id": candidate["id"]}, **features, **{"group": group, "target": 1})
             samples.append(sample)
             break    
     
     for candidate in candidates:
         features = {feature: round(candidate["features"][feature], 3) for feature in candidate["features"]}
-        if candidate["id"] not in cea_gt[key]:
+        if candidate["id"] not in cea_gt:
             sample = dict(**{"tableName": table_name, "key": key, "id": candidate["id"]}, **features, **{"group": group, "target": 0})
             samples.append(sample)
         if len(samples) == 10:
