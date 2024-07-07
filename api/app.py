@@ -944,8 +944,8 @@ class TableID(Resource):
             for k, v in predicates.items():
                 new_predicates.append({"id": k, "name": qids_to_labels[k].get("labels", {}).get("en"), "score": v})
             new_pair_to_predicates.append({
-                "idSourceColumn": source_column,
-                "idTargetColumn": target_column,
+                "idSourceColumn": int(source_column),
+                "idTargetColumn": int(target_column),
                 "predicates": new_predicates
             })
 
@@ -990,7 +990,7 @@ class TableID(Resource):
             for k, v in column_to_types[column].items():
                 types_list.append({"id": k, "name": qids_to_labels[k].get("labels", {}).get("en"), "score": v})
             new_column_to_types.append({
-                "idColumn": column,
+                "idColumn": int(column),
                 "types": types_list
             })
 
