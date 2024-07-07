@@ -940,7 +940,7 @@ class TableID(Resource):
             source_column, target_column = pair
             new_predicates = []
             for k, v in predicates.items():
-                new_predicates.append({"id": k, "name": qids_to_labels[k]["labels"].get("en"), "score": v})
+                new_predicates.append({"id": k, "name": qids_to_labels[k].get("labels", {}).get("en"), "score": v})
             new_pair_to_predicates.append({
                 "idSourceColumn": source_column,
                 "idTargetColumn": target_column,
@@ -984,7 +984,7 @@ class TableID(Resource):
         for column in column_to_types:
             types_list = [] 
             for k, v in column_to_types[column].items():
-                types_list.append({"id": k, "name": qids_to_labels[k]["labels"].get("en"), "score": v})
+                types_list.append({"id": k, "name": qids_to_labels[k].get("labels", {}).get("en"), "score": v})
             new_column_to_types.append({
                 "idColumn": column,
                 "types": types_list
