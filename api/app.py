@@ -785,8 +785,7 @@ class TableID(Resource):
                 }
             }, 200
         except Exception as e:
-            print({"traceback": traceback.format_exc()}, flush=True)
-            return {"status": "Error", "message": str(e)}, 404
+            return {"status": "Error", "message": str(e), "traceback": traceback.format_exc()}, 404
     
 
     def _replace_nan_with_none(self, value):
