@@ -917,6 +917,8 @@ class TableID(Resource):
             for outer_key, inner_dict in winning_predicates.items():
                 for inner_key, predicates in inner_dict.items():
                     for predicate, score in predicates.items():
+                        if predicate == "":
+                            continue
                         aggregated_winning_predicates[(outer_key, inner_key)][predicate] += score
                         predicate_counts[(outer_key, inner_key)][predicate] += 1
 
@@ -962,6 +964,8 @@ class TableID(Resource):
             winning_candidates = doc.get("winningCandidates", {})
             for key, candidates in winning_candidates.items():
                 for candidate, score in candidates.items():
+                    if candidate == "":
+                        continue
                     aggregated_winning_candidates[key][candidate] += score
                     candidate_counts[key][candidate] += 1
 
