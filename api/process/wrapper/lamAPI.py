@@ -1,3 +1,9 @@
+import sys
+import os
+
+# Add the parent directory to the system path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 import aiohttp
 import asyncio
 import traceback
@@ -103,12 +109,13 @@ class LamAPI():
     async def labels(self, entities):
         params = {
             'token': self.client_key,
+            'lang': 'en',
             'kg': self.kg
         }
         json_data = {
             'json': entities
         }
-        result = await self.__submit_post(self._url.entities_labels(), params, json_data)
+        result = await self.__submit_post(self._url.entities_labels_url(), params, json_data)
         result = result if result is not None else {}
         return result
 

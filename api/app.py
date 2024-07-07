@@ -2,12 +2,14 @@ import os
 import logging
 import redis
 import pymongo
+import asyncio
 import math
 import traceback
 import geoip2.database
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from flask_restx import Api, Resource, fields, reqparse
+from collections import defaultdict
 from werkzeug.datastructures import FileStorage
 from datetime import datetime, timedelta
 
@@ -16,12 +18,15 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 logging.getLogger('tensorflow').setLevel(logging.ERROR)
 
 from process.wrapper.Database import MongoDBWrapper
+from process.wrapper.lamAPI import LamAPI
 from utils.Dataset import DatasetModel
 from utils.Table import TableModel
 
 # Configuration
 REDIS_ENDPOINT = os.environ["REDIS_ENDPOINT"]
 REDIS_JOB_DB = int(os.environ["REDIS_JOB_DB"])
+LAMAPI_HOST = os.environ["LAMAPI_ENDPOINT"]
+LAMAPI_TOKEN = os.environ["LAMAPI_TOKEN"]
 API_TOKEN = os.environ["ALLIGATOR_TOKEN"]
 UNLIMITED_TOKEN = os.environ["ALLIGATOR_TOKEN_SECRET"]
 MAXIMUM_REQUESTS_PER_DAY = os.environ["MAXIMUM_REQUESTS_PER_DAY"]
@@ -33,6 +38,7 @@ MAX_PER_PAGE = 100  # Define a sensible maximum limit for items per page
 # Initialize Redis client and MongoDB wrapper
 job_active = redis.Redis(host=REDIS_ENDPOINT, db=REDIS_JOB_DB)
 mongoDBWrapper = MongoDBWrapper()
+lamAPI = LamAPI(LAMAPI_HOST, LAMAPI_TOKEN, mongoDBWrapper, kg="wikidata")
 row_c = mongoDBWrapper.get_collection("row")
 cea_prelinking_c = mongoDBWrapper.get_collection("ceaPrelinking")
 candidate_scored_c = mongoDBWrapper.get_collection("candidateScored")
@@ -862,28 +868,14 @@ class TableID(Resource):
                         "entity": entities
                     })
                 
-            result = cpa_c.find_one(query)
-            if result is not None:
-                winning_predicates = result["cpa"]
-                for id_source_column in winning_predicates:
-                    for id_target_column in winning_predicates[id_source_column]:
-                        object["semanticAnnotations"]["cpa"].append({
-                            "idSourceColumn": id_source_column,
-                            "idTargetColumn": id_target_column,
-                            "predicate": winning_predicates[id_source_column][id_target_column]
-                        })
+            cpa_result = self._get_cpa(dataset_name=result["datasetName"], table_name=result["tableName"])
+            object["semanticAnnotations"]["cpa"] = cpa_result    
+            
+            cta_result = self._get_cta(dataset_name=result["datasetName"], table_name=result["tableName"])
+            object["semanticAnnotations"]["cta"] = cta_result
 
-            result = cta_c.find_one(query)
-            if result is not None:
-                winning_types = result["cta"]
-                for id_col in winning_types:
-                    object["semanticAnnotations"]["cta"].append({
-                        "idColumn": int(id_col),
-                        "types": [winning_types[id_col]]
-                    })            
             return object
     
-
     def _get_annotations_by_confidence(self, query, skip, per_page, column, sort):
         sort_type = pymongo.DESCENDING if sort == "desc" else pymongo.ASCENDING
         # Run the aggregation query with pagination
@@ -909,6 +901,99 @@ class TableID(Resource):
         results = cea_c.aggregate(pipeline)
         return results
     
+    async def fetch_labels(self, qids):
+        return await lamAPI.labels(qids)
+    
+    def _get_cpa(self, dataset_name, table_name):
+        # Initialize dictionaries to aggregate results and count occurrences
+        aggregated_winning_predicates = defaultdict(lambda: defaultdict(float))
+        predicate_counts = defaultdict(lambda: defaultdict(int))
+
+        # Fetch documents from the collection
+        documents = cpa_c.find({"datasetName": dataset_name, "tableName": table_name})
+
+        # Aggregate winning predicates and count occurrences
+        for doc in documents:
+            winning_predicates = doc.get("winningCandidates", {})
+            for outer_key, inner_dict in winning_predicates.items():
+                for inner_key, predicates in inner_dict.items():
+                    for predicate, score in predicates.items():
+                        aggregated_winning_predicates[(outer_key, inner_key)][predicate] += score
+                        predicate_counts[(outer_key, inner_key)][predicate] += 1
+
+        # Normalize the aggregated scores by the number of occurrences
+        normalized_winning_predicates = {}
+        for key, predicates in aggregated_winning_predicates.items():
+            normalized_winning_predicates[key] = {predicate: round(score / predicate_counts[key][predicate], 3) for predicate, score in predicates.items()}
+
+        qids_predicates = set()
+        pair_to_predicates = {}
+        for pair in normalized_winning_predicates:
+            top_5_predicates = sorted(normalized_winning_predicates[pair].items(), key=lambda x: x[1], reverse=True)[0:5]
+            pair_to_predicates[pair] = {}
+            for k, v in top_5_predicates:
+                pair_to_predicates[pair][k] = v 
+                qids_predicates.add(k)
+                
+        qids_to_labels = asyncio.run(self.fetch_labels(list(qids_predicates)))
+        new_pair_to_predicates = []
+        for pair, predicates in pair_to_predicates.items():
+            source_column, target_column = pair
+            new_predicates = []
+            for k, v in predicates.items():
+                new_predicates.append({"id": k, "label": qids_to_labels[k]["labels"].get("en"), "score": v})
+            new_pair_to_predicates.append({
+                "idSourceColumn": source_column,
+                "idTargetColumn": target_column,
+                "predicates": new_predicates
+            })
+
+        return new_pair_to_predicates
+    
+    def _get_cta(self, dataset_name, table_name):
+        # Initialize dictionaries to aggregate results and count occurrences
+        aggregated_winning_candidates = defaultdict(lambda: defaultdict(float))
+        candidate_counts = defaultdict(lambda: defaultdict(int))
+
+        # Fetch documents from the collection
+        documents = cta_c.find({"datasetName": dataset_name, "tableName": table_name})
+
+        # Aggregate winning candidates and count occurrences
+        for doc in documents:
+            winning_candidates = doc.get("winningCandidates", {})
+            for key, candidates in winning_candidates.items():
+                for candidate, score in candidates.items():
+                    aggregated_winning_candidates[key][candidate] += score
+                    candidate_counts[key][candidate] += 1
+
+        # Normalize the aggregated scores by the number of occurrences
+        normalized_winning_candidates = {}
+        for key, candidates in aggregated_winning_candidates.items():
+            normalized_winning_candidates[key] = {candidate: round(score / candidate_counts[key][candidate], 3) for candidate, score in candidates.items()}
+
+        qids_types = set()
+        column_to_types = {}
+        for column in normalized_winning_candidates:
+            top_10_types = sorted(normalized_winning_candidates[column].items(), key=lambda x: x[1], reverse=True)[0:10]
+            column_to_types[column] = {}
+            for k, v in top_10_types:
+                column_to_types[column][k] = v 
+                qids_types.add(k)
+                
+        qids_to_labels = asyncio.run(self.fetch_labels(list(qids_types)))
+        new_column_to_types = []
+        for column in column_to_types:
+            types_list = [] 
+            for k, v in column_to_types[column].items():
+                types_list.append({"id": k, "label": qids_to_labels[k]["labels"].get("en"), "score": v})
+            new_column_to_types.append({
+                "idColumn": column,
+                "types": types_list
+            })
+
+        return new_column_to_types
+    
+
     def delete(self, datasetName, tableName):
         """
             Deletes a specific table from a dataset based on the dataset and table names.
