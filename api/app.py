@@ -759,19 +759,10 @@ class TableID(Resource):
         per_page = max(1, min(int(per_page), MAX_PER_PAGE))  # Enforce maximum limit for per_page
         skip = (page - 1) * per_page
 
-        if column is not None and sort is not None:
-            # Define query for sorting by column
-            new_query = {
-                'datasetName': datasetName,
-                'tableName': tableName,
-                '$expr': {
-                    '$gt': [
-                        {'$size': {'$arrayElemAt': ['$winningCandidates', column]}},
-                        0
-                    ]
-                }
-            }
-            total_items = cea_c.count_documents(new_query)
+        if types and mode:
+            types = types.split(" ")
+            match_criteria = self._get_match_criteria_types(query, column, types, mode)
+            total_items = cea_c.count_documents(match_criteria)
         else:    
             total_items = cea_c.count_documents(query)
        
@@ -848,7 +839,6 @@ class TableID(Resource):
                 print("Sorting by column", column, "in", sort, "order", flush=True)
                 results = self._get_annotations_by_confidence(query, skip, per_page, column, sort)
             elif column is not None and types is not None and mode is not None:
-                types = types.split(" ")
                 results = self._get_annotations_by_types(query, skip, per_page, column, types, mode)
             else:
                 results = cea_c.find(query).skip(skip).limit(per_page)
@@ -917,7 +907,7 @@ class TableID(Resource):
         return results
     
 
-    def _get_annotations_by_types(self, query, skip, per_page, column, types, mode):
+    def _get_match_criteria_types(self, query, column, types, mode):
         # Define the match criteria for the types array based on inclusion or exclusion mode
         if mode == 'include':
             match_criteria = {
@@ -946,6 +936,11 @@ class TableID(Resource):
         else:
             raise ValueError("Invalid mode. Supported modes are 'include' or 'exclude'.")
         
+        return match_criteria
+    
+
+    def _get_annotations_by_types(self, query, skip, per_page, column, types, mode):
+        match_criteria = self._get_match_criteria_types(query, column, types, mode)
         # Build the pipeline
         pipeline = [
             { 
