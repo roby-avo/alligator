@@ -759,7 +759,9 @@ class TableID(Resource):
         per_page = max(1, min(int(per_page), MAX_PER_PAGE))  # Enforce maximum limit for per_page
         skip = (page - 1) * per_page
 
+        filter_active = False
         if types and mode:
+            filter_active = True
             types = types.split(" ")
             match_criteria = self._get_match_criteria_types(query, column, types, mode)
             total_items = cea_c.count_documents(match_criteria)
@@ -769,7 +771,7 @@ class TableID(Resource):
         total_pages = math.ceil(total_items / per_page)
         is_cea_available = True
 
-        if total_items == 0:
+        if total_items == 0 and not filter_active:
             per_page = 1
             skip = (page - 1) * per_page
             total_pages = row_c.count_documents(query)
