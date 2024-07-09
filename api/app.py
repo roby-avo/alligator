@@ -835,11 +835,12 @@ class TableID(Resource):
                 "metadata": result.get("metadata", []),
                 "status": status
             }
+            
 
-            if column is not None and sort is not None:
-                results = self._get_annotations_by_confidence(query, skip, per_page, column, sort)
-            elif column is not None and types is not None and mode is not None:
+            if column is not None and types is not None and mode is not None:
                 results = self._get_annotations_by_types(query, skip, per_page, column, sort, types, mode)
+            elif column is not None and sort is not None:
+                results = self._get_annotations_by_confidence(query, skip, per_page, column, sort)
             else:
                 results = cea_c.find(query).skip(skip).limit(per_page)
 
