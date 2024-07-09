@@ -836,12 +836,10 @@ class TableID(Resource):
                 "status": status
             }
 
-            print("Sorting by column 1", column, "in", sort, "order", flush=True)
             if column is not None and sort is not None:
-                print("Sorting by column", column, "in", sort, "order", flush=True)
                 results = self._get_annotations_by_confidence(query, skip, per_page, column, sort)
             elif column is not None and types is not None and mode is not None:
-                results = self._get_annotations_by_types(query, skip, per_page, column, types, mode)
+                results = self._get_annotations_by_types(query, skip, per_page, column, sort, types, mode)
             else:
                 results = cea_c.find(query).skip(skip).limit(per_page)
 
@@ -941,13 +939,24 @@ class TableID(Resource):
         return match_criteria
     
 
-    def _get_annotations_by_types(self, query, skip, per_page, column, types, mode):
+    def _get_annotations_by_types(self, query, skip, per_page, column, sort, types, mode):
         match_criteria = self._get_match_criteria_types(query, column, types, mode)
         # Build the pipeline
         pipeline = [
             { 
                 '$match': match_criteria
-            },
+            }
+        ]
+        if sort is not None:
+            sort_type = pymongo.DESCENDING if sort == "desc" else pymongo.ASCENDING
+            pipeline += [
+                { 
+                    '$sort': { 
+                        f"scores.{column}": sort_type
+                    } 
+                }
+            ]
+        pipeline += [
             { 
                 '$skip': skip
             },
@@ -955,9 +964,7 @@ class TableID(Resource):
                 '$limit': per_page
             }
         ]
-        
         # Execute the aggregation pipeline
-        print("Aggregating by types", pipeline, flush=True)
         results = cea_c.aggregate(pipeline)
         
         return results
