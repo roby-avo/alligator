@@ -38,7 +38,9 @@ class Decision:
             cea = {}
             rankend_candidates = []
             scores = []
-            for cell in row.get_cells():
+            types = []
+            column_type_set = {}
+            for i, cell in enumerate(row.get_cells()):
                 candidates = cell.candidates()
                 wc = []
                 rank = candidates[0:20] if len(candidates) > 0 else []
@@ -59,6 +61,14 @@ class Decision:
                         wc.extend(candidates[1:3])
                     else:    
                         wc.extend(candidates[1:5])
+                
+                column_type_set[i] = set()
+                for candidate in wc:
+                    for t in candidate.get("types", []):
+                        type_id = t["id"]
+                        if type_id not in column_type_set[i]:
+                            types.append({"column": i, "type": type_id})
+                            column_type_set[i].add(type_id)
 
                 winning_candidates.append(wc)
                 rankend_candidates.append(rank)
@@ -73,7 +83,8 @@ class Decision:
                 "cea": cea,
                 "kgReference": self._kg_reference,
                 "page": self._page,
-                "scores": scores
+                "scores": scores,
+                "types": types
             })
 
             candidates_scored_data.append({

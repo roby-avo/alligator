@@ -713,6 +713,16 @@ class TableID(Resource):
                 "description": "The sorting order for the table data.",
                 "type": "string",
                 "default": None
+            },
+            "types": {
+                "description": "Types of candidate entities to filter by.",
+                "type": "string",
+                "default": None
+            },
+            "mode": {
+                "description": "Include or exclude candidate entities based on the specified types.",
+                "type": "string",
+                "default": None
             }
         },
         description="Retrieve tables within dataset with pagination. Each page contains a subset of tables."
@@ -733,13 +743,16 @@ class TableID(Resource):
         parser.add_argument("per_page", type=int, help="Items per page for pagination", location="args", default=10)
         parser.add_argument("column", type=int, help="Column number for sorting", location="args", default=None)
         parser.add_argument("sort", type=str, help="Sorting order for table data", location="args", default=None)
-        parser.add_argument("token", type=str, help="variable 1", location="args")
+        parser.add_argument("types", type=str, help="Types of candidate entities to filter by", location="args", default=None)
+        parser.add_argument("mode", type=str, help="Include or exclude candidate entities based on the specified types", location="args", default=None)
         args = parser.parse_args()
         page = args["page"]
         per_page = args["per_page"]
         column = args["column"]
         sort = args["sort"]
-        token = args["token"]
+        types = args["types"]
+        mode = args["mode"]
+        
         
         query = {"datasetName": datasetName, "tableName": tableName}
         page = max(1, int(page))
@@ -773,7 +786,7 @@ class TableID(Resource):
             is_cea_available = False
 
         try:
-            out = self._get_table(query, skip, per_page, is_cea_available, column, sort)
+            out = self._get_table(query, skip, per_page, is_cea_available, column, sort, types, mode)
             out = self._replace_nan_with_none(out)  # Replace NaN with None in the output
             return {
                 "data": out,
@@ -800,7 +813,7 @@ class TableID(Resource):
             return [self._replace_nan_with_none(v) for v in value]
         return value
     
-    def _get_table(self, query, skip, per_page, is_cea_available=False, column=None, sort=None):
+    def _get_table(self, query, skip, per_page, is_cea_available=False, column=None, sort=None, types=None, mode=None):
         status = table_c.find_one(query).get("status")
         if not is_cea_available:
             print(skip, per_page, query, flush=True)
@@ -830,10 +843,13 @@ class TableID(Resource):
                 "status": status
             }
 
-            print("Sorting by column", column, "in", sort, "order", flush=True)
+            print("Sorting by column 1", column, "in", sort, "order", flush=True)
             if column is not None and sort is not None:
                 print("Sorting by column", column, "in", sort, "order", flush=True)
                 results = self._get_annotations_by_confidence(query, skip, per_page, column, sort)
+            elif column is not None and types is not None and mode is not None:
+                types = types.split(" ")
+                results = self._get_annotations_by_types(query, skip, per_page, column, types, mode)
             else:
                 results = cea_c.find(query).skip(skip).limit(per_page)
 
@@ -899,6 +915,56 @@ class TableID(Resource):
         ]
         results = cea_c.aggregate(pipeline)
         return results
+    
+
+    def _get_annotations_by_types(self, query, skip, per_page, column, types, mode):
+        # Define the match criteria for the types array based on inclusion or exclusion mode
+        if mode == 'include':
+            match_criteria = {
+                'datasetName': query["datasetName"],
+                'tableName': query["tableName"],
+                'types': {
+                    '$elemMatch': {
+                        'column': column,
+                        'type': { '$in': types }
+                    }
+                }
+            }
+        elif mode == 'exclude':
+            match_criteria = {
+                'datasetName': query["datasetName"],
+                'tableName': query["tableName"],
+                'types': {
+                    '$not': {
+                        '$elemMatch': {
+                            'column': column,
+                            'type': { '$in': types }
+                        }
+                    }
+                }
+            }
+        else:
+            raise ValueError("Invalid mode. Supported modes are 'include' or 'exclude'.")
+        
+        # Build the pipeline
+        pipeline = [
+            { 
+                '$match': match_criteria
+            },
+            { 
+                '$skip': skip
+            },
+            { 
+                '$limit': per_page
+            }
+        ]
+        
+        # Execute the aggregation pipeline
+        print("Aggregating by types", pipeline, flush=True)
+        results = cea_c.aggregate(pipeline)
+        
+        return results
+
     
     async def fetch_labels(self, qids):
         return await lamAPI.labels(qids)
@@ -1007,12 +1073,6 @@ class TableID(Resource):
             Returns:
                 Dict: A status message indicating the result of the delete operation.
         """
-        parser = reqparse.RequestParser()
-        parser.add_argument("token", type=str, help="variable 1", location="args")
-        args = parser.parse_args()
-        token = args["token"]
-       
-
         try:
             self._delete_table(datasetName, tableName)
             return {"datasetName": datasetName, "tableName": tableName, "deleted": True}, 200
