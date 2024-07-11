@@ -856,7 +856,7 @@ class TableID(Resource):
                         entities.append({
                             "id": candidate["id"],
                             "name": candidate["name"],
-                            "type": candidate["types"],
+                            "types": candidate["types"],
                             "description": candidate["description"],
                             "match": candidate["match"],
                             "score": candidate.get("rho'"),
@@ -871,7 +871,7 @@ class TableID(Resource):
                     object["semanticAnnotations"]["cea"].append({
                         "idColumn": id_col,
                         "idRow": result["row"],
-                        "entity": entities
+                        "entities": entities
                     })
                 
             cpa_result = self._get_cpa(dataset_name=result["datasetName"], table_name=result["tableName"])
