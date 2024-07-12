@@ -884,6 +884,7 @@ class TableID(Resource):
     
     def _get_annotations_by_confidence(self, query, skip, per_page, column, sort):
         sort_type = pymongo.DESCENDING if sort == "desc" else pymongo.ASCENDING
+        
         # Run the aggregation query with pagination
         pipeline = [
             { 
@@ -892,9 +893,17 @@ class TableID(Resource):
                     'tableName': query["tableName"]
                 } 
             },
+            {
+                '$unwind': '$scores'
+            },
+            {
+                '$match': {
+                    'scores.column': column
+                }
+            },
             { 
                 '$sort': { 
-                    f"scores.{column}": sort_type
+                    'scores.score': sort_type
                 } 
             },
             { 
