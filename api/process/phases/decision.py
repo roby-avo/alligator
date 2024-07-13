@@ -72,7 +72,7 @@ class Decision:
 
                 winning_candidates.append(wc)
                 rankend_candidates.append(rank)
-                scores.append(score)
+                scores.append({"column": i, "score": score})
 
             cea_data.append({
                 "datasetName": self._dataset_name,
