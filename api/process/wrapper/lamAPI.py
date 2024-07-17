@@ -50,7 +50,7 @@ class LamAPI():
     async def __submit_post(self, url, params, json_data):
         try:
             retry_options = ExponentialRetry(attempts=3, start_timeout=3, max_timeout=10)
-            timeout = aiohttp.ClientTimeout(total=60)  # Adjusted timeout
+            timeout = aiohttp.ClientTimeout(total=120)  # Adjusted timeout
             async with self.semaphore:
                 async with RetryClient(connector=aiohttp.TCPConnector(ssl=False), retry_options=retry_options) as session:
                     async with session.post(url, headers=headers, params=params, json=json_data, timeout=timeout) as response:
