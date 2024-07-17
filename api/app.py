@@ -567,6 +567,7 @@ class DatasetTable(Resource):
         parser.add_argument("token", type=str, help="variable 2", location="args")
         args = parser.parse_args()
         kg_reference = "wikidata"
+        
         if args["kgReference"] is not None:
             kg_reference = args["kgReference"]
 

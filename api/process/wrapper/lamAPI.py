@@ -176,7 +176,7 @@ class LamAPI():
             'token': self.client_key,
             'name': string,
             'fuzzy': fuzzy_str,
-            'kg': 'wikidata',
+            'kg': self.kg,
             'limit': limit,
             'types': types_str,
             'ids': ids_str,

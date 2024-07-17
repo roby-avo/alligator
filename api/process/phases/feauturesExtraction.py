@@ -141,7 +141,7 @@ class FeauturesExtraction:
                         self._cache_lit[id_subject] = subj_literals
                     else:   
                         subj_literals = self._cache_lit.get(id_subject, {})
-                    
+                
                 lit_string = self._get_literal_values_string(subj_literals)
                 row_text_all = utils.clean_str(row.get_text())
                 row_text_lit = utils.clean_str(row.get_text({"LIT"}))
