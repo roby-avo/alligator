@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from flask_testing import TestCase
 from dotenv import load_dotenv
 from pymongo import MongoClient
-from app import app, mongoDBWrapper
+from app.utils import app, mongoDBWrapper
 
 # Load environment variables from .env file
 load_dotenv()

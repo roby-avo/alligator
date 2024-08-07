@@ -2,15 +2,15 @@ import sys
 import os
 
 # Add the parent directory to the system path
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+#sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 
 from fastapi import APIRouter, HTTPException, UploadFile, File, Depends, Request
 from typing import List, Dict, Any
 import pandas as pd
-from app.models.models import Dataset, Table
-from app.utils.mongodb_utils import MongoDBHandler
-from app.utils.auth import authenticate_token
-from app.utils.ip_tracing import trace_ip
+from models.models import Dataset, Table
+from utils.mongodb_utils import MongoDBHandler
+from utils.auth import authenticate_token
+from utils.ip_tracing import trace_ip
 
 router = APIRouter()
 
