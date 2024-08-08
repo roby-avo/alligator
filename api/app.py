@@ -28,7 +28,6 @@ REDIS_JOB_DB = int(os.environ["REDIS_JOB_DB"])
 LAMAPI_HOST = os.environ["LAMAPI_ENDPOINT"]
 LAMAPI_TOKEN = os.environ["LAMAPI_TOKEN"]
 API_TOKEN = os.environ["ALLIGATOR_TOKEN"]
-TEMPORARY_TOKEN = os.environ["ALLIGATOR_TEMPORARY_TOKEN"]
 UNLIMITED_TOKEN = os.environ["ALLIGATOR_TOKEN_SECRET"]
 MAXIMUM_REQUESTS_PER_DAY = os.environ["MAXIMUM_REQUESTS_PER_DAY"]
 MAX_CONTENT_LENGTH = 500 * 1024 * 1024  # 500MB limit
@@ -67,7 +66,7 @@ upload_parser.add_argument("file", location="files", type=FileStorage, required=
 
 # Token validation function
 def validate_token(token):
-    return token == API_TOKEN or token == TEMPORARY_TOKEN
+    return token == API_TOKEN
 
 
 # GeoIP database setup
@@ -287,7 +286,7 @@ class CreateWithArray(Resource):
         
         
         try:
-            table = TableModel(mongoDBWrapper)
+            table = TableModel(mongoDBWrapper, lamAPI)
             table.parse_json(tables)
             table.store_tables()
             dataset = DatasetModel(mongoDBWrapper, table.table_metadata)
@@ -578,7 +577,7 @@ class DatasetTable(Resource):
             dataset_name = datasetName
             table_name = uploaded_file.filename.split(".")[0]
             out = [{"datasetName": datasetName, "tableName": table_name}]
-            table = TableModel(mongoDBWrapper)
+            table = TableModel(mongoDBWrapper, lamAPI)
             num_rows = table.parse_csv(uploaded_file, dataset_name, table_name, kg_reference)
             table.store_tables(num_rows)
             dataset = DatasetModel(mongoDBWrapper, table.table_metadata)

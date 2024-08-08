@@ -1,7 +1,14 @@
 import pandas as pd
 import math
 import time
+import sys
 import os
+
+# Add the parent directory to the system path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+from process.phases.data_preparation import DataPreparation
+
 
 class TableModel:
     
@@ -12,8 +19,9 @@ class TableModel:
     SPLIT_THRESHOLD = 2 * CHUNCK_SIZE  # Set SPLIT_THRESHOLD based on CHUNCK_SIZE
 
 
-    def __init__(self, db):
+    def __init__(self, db, lamAPI):
         self._db = db
+        self._lamAPI = lamAPI
         self.data = []
         self.table_metadata = {}
 
@@ -66,6 +74,7 @@ class TableModel:
                     processed_data.append(new_entry)
             else:
                 processed_data.append(entry)
+            self.compute_datatypes(entry)    
 
         self.data.extend(processed_data)
 
@@ -111,8 +120,21 @@ class TableModel:
             table_obj['rows'] = [{"idRow": idx + 1, "data": row_data} for idx, row_data in enumerate(df.values.tolist())]
             self.data.append(table_obj)
         
+        self.compute_datatypes(table_obj)
+        
         return num_rows
-
+    
+    def compute_datatypes(self, table_obj):
+        dp = DataPreparation(table_obj['header'], table_obj['rows'], self._lamAPI)
+        column_metadata, target = dp.compute_datatype(table_obj.get('column', {}), table_obj.get('target', {}))
+        if target["SUBJ"] is not None:
+            column_metadata[str(target["SUBJ"])] = "SUBJ"
+        table_obj["column"] = column_metadata
+        table_obj["metadata"] = {
+            "column": [{"idColumn": int(id_col), "tag": column_metadata[id_col]} for id_col in column_metadata]
+        }
+        table_obj["target"] = target
+        
     def fill_table_metadata(self, entry):
         dataset_name = entry['datasetName']
         table_name = entry['tableName']

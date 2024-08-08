@@ -15,9 +15,7 @@ parentdir = os.path.dirname(currentdir)
 sys.path.append(parentdir)
 DBNAME = os.environ["MONGO_DBNAME"]
 MONGO_ENDPOINT, MONGO_ENDPOINT_PORT = os.environ["MONGO_ENDPOINT"].split(":")
-MONGO_ENDPOINT_USERNAME = os.environ["MONGO_INITDB_ROOT_USERNAME"]
-MONGO_ENDPOINT_PASSWORD = os.environ["MONGO_INITDB_ROOT_PASSWORD"]
-client = MongoClient(MONGO_ENDPOINT, int(MONGO_ENDPOINT_PORT), username=MONGO_ENDPOINT_USERNAME, password=MONGO_ENDPOINT_PASSWORD)
+client = MongoClient(MONGO_ENDPOINT, int(MONGO_ENDPOINT_PORT))
 cea_c = client[DBNAME].cea
 cea_c = client[DBNAME].ceaPrelinking
 #cea_c = client[DBNAME].ceaInit
