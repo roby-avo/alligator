@@ -34,6 +34,7 @@ class TableModel:
         processed_data = []
         for entry in json_data:
             self.fill_table_metadata(entry)
+            self.compute_datatypes(entry)  
             rows = entry['rows']
             column_metadata = entry.get('metadata', {}).get('column', {})
             column_types = entry.get('semanticAnnotations', {}).get('cta', {})
@@ -74,7 +75,7 @@ class TableModel:
                     processed_data.append(new_entry)
             else:
                 processed_data.append(entry)
-            self.compute_datatypes(entry)    
+              
 
         self.data.extend(processed_data)
 
@@ -98,7 +99,9 @@ class TableModel:
             "candidateSize": 1000,
             "page": 1
         }
-
+        table_obj['rows'] = [{"idRow": idx + 1, "data": row_data} for idx, row_data in enumerate(df.values.tolist())]
+        self.compute_datatypes(table_obj)
+        
         self.fill_table_metadata(table_obj)    
         # Split DataFrame rows into chunks of CHUNK_SIZE and create new table entries for each chunk
         num_rows = len(df)
@@ -119,9 +122,7 @@ class TableModel:
         else:
             table_obj['rows'] = [{"idRow": idx + 1, "data": row_data} for idx, row_data in enumerate(df.values.tolist())]
             self.data.append(table_obj)
-        
-        self.compute_datatypes(table_obj)
-        
+         
         return num_rows
     
     def compute_datatypes(self, table_obj):
