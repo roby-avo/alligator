@@ -1,15 +1,16 @@
 from dateutil.parser import parse
 import re
 
-
 def clean_str(value):
-    original_value = str(value).lower()
-    value = original_value
+    original_value = str(value)
     
-    # Remove purely numerical content within brackets
-    value = re.sub(r'\[\d+\w*\]', '', value)
+    # Remove content within brackets (including the brackets themselves)
+    value = re.sub(r'\[.*?\]', '', original_value)
     
-    # Remove specific unwanted characters
+    # Remove content within parentheses (including the parentheses themselves)
+    value = re.sub(r'\(.*?\)', '', value)
+    
+    # Replace specific unwanted characters with space
     stop_characters = ["_"]
     for char in stop_characters:
         value = value.replace(char, " ")
@@ -18,8 +19,9 @@ def clean_str(value):
     value = " ".join(value.split())
     
     # Return the original string if the cleaned result is empty
-    if not value:
+    if not value.strip():
         return original_value
+    
     return value
 
 
