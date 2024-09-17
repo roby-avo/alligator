@@ -38,7 +38,6 @@ class TableModel:
             rows = entry['rows']
             column_metadata = entry.get('metadata', {}).get('column', {})
             column_types = entry.get('semanticAnnotations', {}).get('cta', {})
-            entry['column'] = {str(c['idColumn']):c['tag'] for c in column_metadata}
             entry['types'] = {str(c['idColumn']):' '.join(sorted(c['types'], reverse=True)) for c in column_types}
 
             for id_col, column in enumerate(column_metadata):
