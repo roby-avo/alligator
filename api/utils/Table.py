@@ -39,7 +39,6 @@ class TableModel:
             column_metadata = entry.get('metadata', {}).get('column', {})
             column_types = entry.get('semanticAnnotations', {}).get('cta', {})
             entry['column'] = {str(c['idColumn']):c['tag'] for c in column_metadata}
-            entry['target'] = {"SUBJ": None, "NE": [], "LIT": [], "LIT_DATATYPE": {}}
             entry['types'] = {str(c['idColumn']):' '.join(sorted(c['types'], reverse=True)) for c in column_types}
 
             for id_col, column in enumerate(column_metadata):
