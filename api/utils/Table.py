@@ -36,21 +36,11 @@ class TableModel:
             self.fill_table_metadata(entry)
             self.compute_datatypes(entry)  
             rows = entry['rows']
-            column_metadata = entry.get('metadata', {}).get('column', {})
             column_types = entry.get('semanticAnnotations', {}).get('cta', {})
             entry['types'] = {str(c['idColumn']):' '.join(sorted(c['types'], reverse=True)) for c in column_types}
 
-            for id_col, column in enumerate(column_metadata):
-                if column["tag"] == "SUBJ":
-                    entry['target']['SUBJ'] = id_col
-                    entry['target']['NE'].append(column["idColumn"]) 
-                elif column["tag"] == "NE":
-                    entry['target']['NE'].append(column["idColumn"]) 
-                elif column["tag"] == "LIT":
-                    entry['target']['LIT'].append(column["idColumn"]) 
-                    entry['target']['LIT_DATATYPE'][str(column["idColumn"])] = column["datatype"]
-            
-            entry['page'] = 1
+            # Set default values for page, status and state
+            entry['page'] = 1   
             entry['status'] = 'TODO'
             entry['state'] = 'READY'
             if "candidateSize" not in entry:
