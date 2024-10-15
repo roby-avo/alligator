@@ -89,8 +89,8 @@ class TableModel:
         }
         table_obj['rows'] = [{"idRow": idx + 1, "data": row_data} for idx, row_data in enumerate(df.values.tolist())]
         self.compute_datatypes(table_obj)
-        
         self.fill_table_metadata(table_obj)    
+
         # Split DataFrame rows into chunks of CHUNK_SIZE and create new table entries for each chunk
         num_rows = len(df)
         if num_rows >= TableModel.SPLIT_THRESHOLD:
@@ -123,6 +123,7 @@ class TableModel:
             "column": [{"idColumn": int(id_col), "tag": column_metadata[id_col]} for id_col in column_metadata]
         }
         table_obj["target"] = target
+        
         
     def fill_table_metadata(self, entry):
         dataset_name = entry['datasetName']

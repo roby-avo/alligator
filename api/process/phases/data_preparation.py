@@ -7,7 +7,6 @@ class DataPreparation:
         self._column_to_datatype = self._parse_header(header)
         self._lamAPI = lamAPI
 
-
     def _parse_header(self, header):
         parsed_header = {}
         for id_col, column_label in enumerate(header):
@@ -25,7 +24,6 @@ class DataPreparation:
                 parsed_header[str(id_col)] = {'kind': kind, 'datatype': datatype}
         return parsed_header
             
-  
     def compute_datatype(self, current_column_metadata, current_target):
         column_metadata = {}
         print("column_metadata", self._column_to_datatype, flush=True)
@@ -36,8 +34,10 @@ class DataPreparation:
             for id_col, cell in enumerate(row["data"]):
                 columns_data[id_col].append(str(cell))
         
+        print("columns_data", columns_data, flush=True)
         # Run the async function and wait for it to complete
         metadata = asyncio.run(self._lamAPI.column_analysis(columns_data))
+        print("metadata", metadata, flush=True)
         first_NE_column = False  
         for id_col in metadata:
             lit_datatype = None
@@ -65,9 +65,7 @@ class DataPreparation:
             elif tag == "LIT":
                 target['LIT_DATATYPE'][str(id_col)] = lit_datatype
         
-
         return column_metadata, target        
-
 
     def rows_normalization(self):
         for row in self._rows:
