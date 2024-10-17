@@ -100,10 +100,11 @@ class LamAPI():
             'json': [columns]
         }
         params = {
+            'model_type': 'fast',    
             'token': self.client_key
         }
         result =  await self.__submit_post(self._url.column_analysis_url(), params, json_data)
-        result = list(result[0].values())[0] if result is not None else []
+        result = result[0]["table_1"] if result is not None else []
         return result
 
     async def labels(self, entities):
