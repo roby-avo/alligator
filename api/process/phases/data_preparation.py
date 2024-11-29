@@ -26,18 +26,18 @@ class DataPreparation:
             
     def compute_datatype(self, current_column_metadata, current_target):
         column_metadata = {}
-        print("column_metadata", self._column_to_datatype, flush=True)
-        print("rows", self._rows, flush=True)
+        #print("column_metadata", self._column_to_datatype, flush=True)
+        #print("rows", self._rows, flush=True)
         target = {"SUBJ": None, "NE": [], "LIT": [], "NO_TAG": [], "LIT_DATATYPE": {}}
         columns_data = [[] for _ in range(0, len(self._rows[0]['data']))]
         for row in self._rows:
             for id_col, cell in enumerate(row["data"]):
                 columns_data[id_col].append(str(cell))
         
-        print("columns_data", columns_data, flush=True)
+        #print("columns_data", columns_data, flush=True)
         # Run the async function and wait for it to complete
         metadata = asyncio.run(self._lamAPI.column_analysis(columns_data))
-        print("metadata", metadata, flush=True)
+        #print("metadata", metadata, flush=True)
         first_NE_column = False  
         for id_col in metadata:
             lit_datatype = None
