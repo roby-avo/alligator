@@ -7,8 +7,6 @@ import os
 # Add the parent directory to the system path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from process.phases.data_preparation import DataPreparation
-
 
 class TableModel:
     
@@ -34,7 +32,6 @@ class TableModel:
         processed_data = []
         for entry in json_data:
             self.fill_table_metadata(entry)
-            self.compute_datatypes(entry)  
             rows = entry['rows']
             column_types = entry.get('semanticAnnotations', {}).get('cta', {})
             entry['types'] = {str(c['idColumn']):' '.join(sorted(c['types'], reverse=True)) for c in column_types}
@@ -88,7 +85,6 @@ class TableModel:
             "page": 1
         }
         table_obj['rows'] = [{"idRow": idx + 1, "data": row_data} for idx, row_data in enumerate(df.values.tolist())]
-        self.compute_datatypes(table_obj)
         self.fill_table_metadata(table_obj)    
 
         # Split DataFrame rows into chunks of CHUNK_SIZE and create new table entries for each chunk
@@ -113,18 +109,6 @@ class TableModel:
          
         return num_rows
     
-    def compute_datatypes(self, table_obj):
-        dp = DataPreparation(table_obj['header'], table_obj['rows'], self._lamAPI)
-        column_metadata, target = dp.compute_datatype(table_obj.get('column', {}), table_obj.get('target', {}))
-        if target["SUBJ"] is not None:
-            column_metadata[str(target["SUBJ"])] = "SUBJ"
-        table_obj["column"] = column_metadata
-        table_obj["metadata"] = {
-            "column": [{"idColumn": int(id_col), "tag": column_metadata[id_col]} for id_col in column_metadata]
-        }
-        table_obj["target"] = target
-        
-        
     def fill_table_metadata(self, entry):
         dataset_name = entry['datasetName']
         table_name = entry['tableName']

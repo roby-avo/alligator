@@ -57,8 +57,8 @@ async def main():
     rows_data = data["rows"]
     kg_reference = data["kgReference"]
     limit = data["candidateSize"]
-    column_metadata = data["column"]
-    target = data["target"]
+    column_metadata = data.get("column", {})
+    target = data.get("target", {})
     _id = data["_id"]
     dataset_name = data["datasetName"]
     table_name = data["tableName"]
@@ -71,15 +71,14 @@ async def main():
     dp = DataPreparation(header, rows_data, lamAPI)
     
     try:
-        # it has been moved in a different part of the code
-        # column_metadata, target = await dp.compute_datatype(column_metadata, target)
-        # if target["SUBJ"] is not None:
-        #     column_metadata[str(target["SUBJ"])] = "SUBJ"
-        # obj_row_update["column"] = column_metadata
-        # obj_row_update["metadata"] = {
-        #     "column": [{"idColumn": int(id_col), "tag": column_metadata[id_col]} for id_col in column_metadata]
-        # }
-        # obj_row_update["target"] = target
+        column_metadata, target = await dp.compute_datatype(column_metadata, target)
+        if target["SUBJ"] is not None:
+            column_metadata[str(target["SUBJ"])] = "SUBJ"
+        obj_row_update["column"] = column_metadata
+        obj_row_update["metadata"] = {
+            "column": [{"idColumn": int(id_col), "tag": column_metadata[id_col]} for id_col in column_metadata]
+        }
+        obj_row_update["target"] = target
             
         metadata = {
             "datasetName": dataset_name,

@@ -24,7 +24,7 @@ class DataPreparation:
                 parsed_header[str(id_col)] = {'kind': kind, 'datatype': datatype}
         return parsed_header
             
-    def compute_datatype(self, current_column_metadata, current_target):
+    async def compute_datatype(self, current_column_metadata, current_target):
         column_metadata = {}
         #print("column_metadata", self._column_to_datatype, flush=True)
         #print("rows", self._rows, flush=True)
@@ -36,7 +36,7 @@ class DataPreparation:
         
         #print("columns_data", columns_data, flush=True)
         # Run the async function and wait for it to complete
-        metadata = asyncio.run(self._lamAPI.column_analysis(columns_data))
+        metadata = await self._lamAPI.column_analysis(columns_data)
         #print("metadata", metadata, flush=True)
         first_NE_column = False  
         for id_col in metadata:
