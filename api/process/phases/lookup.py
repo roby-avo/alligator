@@ -51,7 +51,7 @@ class Lookup:
         candidates = []
         try:
             if len(str(cell)) > 0 and str(cell).lower() != "nan":
-                candidates = await self._lamAPI.lookup(cell, limit=self._limit, kg=self._kg_ref)
+                candidates = await self._lamAPI.lookup(cell, limit=self._limit)
                 return candidates
         except Exception as e:
             self._log_c.insert_one({
