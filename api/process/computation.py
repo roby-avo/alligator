@@ -14,7 +14,8 @@ from phases.feauturesExtraction import FeauturesExtraction
 from phases.lookup import Lookup
 from phases.prediction import Prediction
 from phases.decision import Decision
-from wrapper.lamAPI import LamAPI
+# Use the enhanced LamAPI with caching
+from wrapper.lamAPIWithCache import LamAPI
 from wrapper.Database import MongoDBWrapper  # MongoDB database wrapper
 
 

@@ -33,15 +33,21 @@ def compute_similarity_between_dates(date1: str, date2: str):
             
     return score
 
-def compute_similarity_between_string(str1, str2, ngram=None):
+def compute_similarity_between_string(str1, str2, ngram=None, id=None):
     ngrams_str1 = utils.get_ngrams(str1, ngram)
     ngrams_str2 = utils.get_ngrams(str2, ngram) 
+    if id == "Q29588607":
+        print("ngrams_str1", ngrams_str1, flush=True)
+        print("ngrams_str2", ngrams_str2, flush=True)
     score = len(ngrams_str1.intersection(ngrams_str2)) / max(len(ngrams_str1), len(ngrams_str2), 1)
     return score
 
 
-def compute_similarity_between_string_token_based(str1, str2):
-    token_set_str1 = set(str1.split(" "))
-    token_set_str2 = set(str2.split(" "))
+def compute_similarity_between_string_token_based(str1, str2, id=None):
+    token_set_str1 = set(str1.lower().split())
+    token_set_str2 = set(str2.lower().split())
+    if id == "Q29588607":
+        print("token_set_str1", token_set_str1, flush=True)
+        print("token_set_str2", token_set_str2, flush=True)
     score = len(token_set_str1.intersection(token_set_str2)) / max(len(token_set_str1), len(token_set_str2), 1)
     return score    

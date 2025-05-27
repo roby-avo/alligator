@@ -41,7 +41,7 @@ class TableModel:
             entry['status'] = 'TODO'
             entry['state'] = 'READY'
             if "candidateSize" not in entry:
-                entry['candidateSize'] = 100
+                entry['candidateSize'] = 20
 
             # Split rows into chunks of CHUNCK_SIZE and create new table entries for each chunk
             if len(rows) >= TableModel.CHUNCK_SIZE * 2:

@@ -18,7 +18,8 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 logging.getLogger('tensorflow').setLevel(logging.ERROR)
 
 from process.wrapper.Database import MongoDBWrapper
-from process.wrapper.lamAPI import LamAPI
+# Use the enhanced LamAPI with caching
+from process.wrapper.lamAPIWithCache import LamAPI
 from utils.Dataset import DatasetModel
 from utils.Table import TableModel
 

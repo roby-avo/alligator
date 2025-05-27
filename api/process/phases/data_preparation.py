@@ -37,6 +37,111 @@ class DataPreparation:
         #print("columns_data", columns_data, flush=True)
         # Run the async function and wait for it to complete
         metadata = await self._lamAPI.column_analysis(columns_data)
+        metadata = {
+            "0": {
+                "index_column": 0,
+                "tag": "NE",
+                "classification": "PERSON",
+                "datatype": "PERSON",
+                "probabilities": {
+                "PERSON": 1.0
+                }
+            },
+            "1": {
+                "index_column": 1,
+                "tag": "LIT",
+                "classification": "NUMBER",
+                "datatype": "NUMBER",
+                "probabilities": {
+                "NUMBER": 1.0,
+                "DATE": 1.0
+                }
+            },
+            "2": {
+                "index_column": 2,
+                "tag": "LIT",
+                "classification": "NUMBER",
+                "datatype": "NUMBER",
+                "probabilities": {
+                "NUMBER": 1.0
+                }
+            },
+            "3": {
+                "index_column": 3,
+                "tag": "NE",
+                "classification": "ORGANIZATION",
+                "datatype": "ORGANIZATION",
+                "probabilities": {
+                "ORGANIZATION": 1.0
+                }
+            },
+            "4": {
+                "index_column": 4,
+                "tag": "LIT",
+                "classification": "NUMBER",
+                "datatype": "NUMBER",
+                "probabilities": {
+                "NUMBER": 1.0
+                }
+            },
+            "5": {
+                "index_column": 5,
+                "tag": "LIT",
+                "classification": "STRING",
+                "datatype": "STRING",
+                "probabilities": {
+                "PERSON": 1.0
+                }
+            },
+            "6": {
+                "index_column": 6,
+                "tag": "LIT",
+                "classification": "NUMBER",
+                "datatype": "NUMBER",
+                "probabilities": {
+                "NUMBER": 1.0
+                }
+            },
+            "7": {
+                "index_column": 7,
+                "tag": "NE",
+                "classification": "PERSON",
+                "datatype": "PERSON",
+                "probabilities": {
+                "PERSON": 1.0
+                }
+            },
+            "8": {
+                "index_column": 8,
+                "tag": "NE",
+                "classification": "PERSON",
+                "datatype": "PERSON",
+                "probabilities": {
+                "PERSON": 1.0
+                }
+            },
+            "9": {
+                "index_column": 9,
+                "tag": "LIT",
+                "classification": "NUMBER",
+                "datatype": "NUMBER",
+                "probabilities": {
+                "NUMBER": 1.0,
+                "DATE": 1.0
+                }
+            },
+            "10": {
+                "index_column": 10,
+                "tag": "LIT",
+                "classification": "STRING",
+                "datatype": "STRING",
+                "probabilities": {
+                "STRING": 1.0
+                }
+            }
+        }
+  
+
         #print("metadata", metadata, flush=True)
         first_NE_column = False  
         for id_col in metadata:

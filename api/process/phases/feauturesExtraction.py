@@ -112,7 +112,7 @@ class FeauturesExtraction:
     async def _match_lit_cells(self, subj_cell, obj_cell, row, nLIT_cells):
         async with self._lamAPI.semaphore:
 
-            def get_score_based_on_datatype(valueInCell, valueFromKG, datatype):
+            def get_score_based_on_datatype(valueInCell, valueFromKG, datatype, id=None):
                 score = 0
                 valueFromKG = str(valueFromKG)
                 if datatype == "NUMBER":
@@ -120,7 +120,7 @@ class FeauturesExtraction:
                 elif datatype == "DATETIME":
                     score = metrics.compute_similarity_between_dates(valueInCell, valueFromKG.lower())
                 elif datatype == "STRING":
-                    score = metrics.compute_similarity_between_string(valueInCell, valueFromKg.lower())
+                    score = metrics.compute_similarity_between_string(valueInCell, valueFromKg.lower(), id=id)
                 return score
 
         
@@ -145,10 +145,16 @@ class FeauturesExtraction:
                 lit_string = self._get_literal_values_string(subj_literals)
                 row_text_all = utils.clean_str(row.get_text())
                 row_text_lit = utils.clean_str(row.get_text({"LIT"}))
-                p_subj_lit_all_datatype = metrics.compute_similarity_between_string_token_based(lit_string, row_text_lit)
-                p_subj_lit_row = metrics.compute_similarity_between_string_token_based(lit_string, row_text_all)
-                subj_candidate["features"]["p_subj_lit_all_datatype"] = round(p_subj_lit_all_datatype, 3)
-                subj_candidate["features"]["p_subj_lit_row"] = round(p_subj_lit_row, 3)
+                if id_subject == "Q29588607":
+                    print("candidate", subj_candidate, flush=True)
+                    print("row_text_all", row_text_all.lower(), flush=True)
+                    print("row_text_lit", row_text_lit.lower(), flush=True)
+                    print("lit_string", lit_string.lower(), flush=True)
+                    print("subj_literals", subj_literals, flush=True)
+                p_subj_lit_all_datatype = metrics.compute_similarity_between_string_token_based(lit_string, row_text_lit, id=id_subject)
+                p_subj_lit_row = metrics.compute_similarity_between_string_token_based(lit_string, row_text_all, id=id_subject)
+                subj_candidate["features"]["p_subj_lit_all_datatype"] = p_subj_lit_all_datatype
+                subj_candidate["features"]["p_subj_lit_row"] = p_subj_lit_row
 
                 new_datatype = datatype
 
@@ -176,4 +182,4 @@ class FeauturesExtraction:
                             if p_subj_lit > subj_candidate["predicates"][str(obj_cell._id_col)][predicate]:
                                 subj_candidate["predicates"][str(obj_cell._id_col)][predicate] = p_subj_lit    
                                 
-                subj_candidate["features"]["p_subj_lit_datatype"] += round(max_score/nLIT_cells, 3)
+                subj_candidate["features"]["p_subj_lit_datatype"] += max_score/nLIT_cells

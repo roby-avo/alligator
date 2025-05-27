@@ -1,31 +1,32 @@
-import sys
-import os
-
-# Add the parent directory to the system path
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
 import aiohttp
 import asyncio
-import traceback
-from wrapper.URLs import URLs
-from aiohttp_retry import RetryClient, ExponentialRetry
+import json
+import os
+from .lamAPICache import LamAPICache
+from .URLs import URLs  # Fixed: Changed from wrapper.URLs to relative import
 
 
-headers = {
-    'accept': 'application/json'
-}
-
-
-class LamAPI():
-    def __init__(self, host, client_key, database, response_format="json", kg="wikidata", max_concurrent_requests=50) -> None:
-        self.format = response_format
-        self.database = database
-        self._url = URLs(host, response_format=response_format)
-        self.client_key = client_key
+class LamAPI:
+    def __init__(self, host, token, mongoDBWrapper, kg="wikidata"):
+        """
+        Initialize the LamAPI with caching capabilities.
+        
+        Args:
+            host: API host
+            token: API token
+            mongoDBWrapper: MongoDB wrapper instance
+            kg: Knowledge graph to use
+        """
+        self.host = host
+        self.token = token
         self.kg = kg
-        # Initialize the semaphore with the max_concurrent_requests limit
-        self.semaphore = asyncio.Semaphore(max_concurrent_requests)
-
+        self.semaphore = asyncio.Semaphore(30)  # Limit concurrent requests
+        self.cache = LamAPICache(mongoDBWrapper)
+        self._url = URLs(host, response_format="json")
+        self.client_key = token
+        self.format = "json"
+        self.database = mongoDBWrapper
+        
     async def __to_format(self, response):
         try:
             result = await response.json()
@@ -37,33 +38,34 @@ class LamAPI():
 
     async def __submit_get(self, url, params):
         try:
-            retry_options = ExponentialRetry(attempts=3, start_timeout=3, max_timeout=10)
-            timeout = aiohttp.ClientTimeout(total=1000)  # Adjusted timeout
+            headers = {"accept": "application/json"}
+            timeout = aiohttp.ClientTimeout(total=60)
+            
             async with self.semaphore:
-                async with RetryClient(connector=aiohttp.TCPConnector(ssl=False), retry_options=retry_options) as session:
+                async with aiohttp.ClientSession() as session:
                     async with session.get(url, headers=headers, params=params, timeout=timeout) as response:
                         return await self.__to_format(response)
         except Exception as e:
             self.__log_error("GET", url, params, str(e))
-            return {"error": str(e)}  # Return a structured error message.
+            return {"error": str(e)}
 
     async def __submit_post(self, url, params, json_data):
         try:
-            retry_options = ExponentialRetry(attempts=3, start_timeout=3, max_timeout=10)
-            timeout = aiohttp.ClientTimeout(total=120)  # Adjusted timeout
+            headers = {"accept": "application/json", "Content-Type": "application/json"}
+            timeout = aiohttp.ClientTimeout(total=60)
+            
             async with self.semaphore:
-                async with RetryClient(connector=aiohttp.TCPConnector(ssl=False), retry_options=retry_options) as session:
+                async with aiohttp.ClientSession() as session:
                     async with session.post(url, headers=headers, params=params, json=json_data, timeout=timeout) as response:
                         return await self.__to_format(response)
         except Exception as e:
             self.__log_error("POST", url, params, str(e), json_data)
-            return {"error": str(e)}  # Return a structured error message.
+            return {"error": str(e)}
 
     def __log_error(self, method, url, params, error_message, json_data=None):
-        # Use a generic or specific error type based on the exception.
         error_type = "timeout" if "TimeoutError" in error_message else "generic"
-        traceback_info = traceback.format_exc()
-
+        traceback_info = ""
+        
         self.database.get_collection("log").insert_one({
             "type": error_type,
             "method": method,
@@ -73,8 +75,43 @@ class LamAPI():
             "error_message": error_message,
             "stack_trace": traceback_info,
         })
-                
+
+    # Adding the missing methods from original lamAPI.py
+    
+    async def column_analysis(self, columns):
+        """
+        Perform column analysis with caching
+        """
+        # Check cache first
+        cache_key = f"column_analysis"
+        cached_data, found = self.cache.get(cache_key, columns)
+        
+        if found:
+            return cached_data
+        
+        json_data = {
+            'json': [columns]
+        }
+        params = {
+            'model_type': 'fast',    
+            'token': self.client_key
+        }
+        result = await self.__submit_post(self._url.column_analysis_url(), params, json_data)
+        result = result[0]["table_1"] if result is not None and len(result) > 0 else []
+        
+        self.cache.set(cache_key, columns, result)
+        return result
+    
     async def literal_recognizer(self, column):
+        """
+        Recognize literals with caching
+        """
+        cache_key = f"literal_recognizer"
+        cached_data, found = self.cache.get(cache_key, column)
+        
+        if found:
+            return cached_data
+            
         json_data = {
             'json': column
         }
@@ -82,6 +119,7 @@ class LamAPI():
             'token': self.client_key
         }
         result = await self.__submit_post(self._url.literal_recognizer_url(), params, json_data)
+        
         freq_data = {}
         for cell in result:
             item = result[cell]
@@ -91,23 +129,21 @@ class LamAPI():
                 datatype = item["classification"]  
             if datatype not in freq_data:
                 freq_data[datatype] = 0
-            freq_data[datatype] += 1   
-
+            freq_data[datatype] += 1
+        
+        self.cache.set(cache_key, column, freq_data)
         return freq_data
-
-    async def column_analysis(self, columns):
-        json_data = {
-            'json': [columns]
-        }
-        params = {
-            'model_type': 'fast',    
-            'token': self.client_key
-        }
-        result =  await self.__submit_post(self._url.column_analysis_url(), params, json_data)
-        result = result[0]["table_1"] if result is not None else []
-        return result
-
+        
     async def labels(self, entities):
+        """
+        Get labels for entity IDs with caching
+        """
+        cache_key = f"labels"
+        cached_data, found = self.cache.get(cache_key, entities)
+        
+        if found:
+            return cached_data
+            
         params = {
             'token': self.client_key,
             'lang': 'en',
@@ -118,9 +154,20 @@ class LamAPI():
         }
         result = await self.__submit_post(self._url.entities_labels_url(), params, json_data)
         result = result if result is not None else {}
+        
+        self.cache.set(cache_key, entities, result)
         return result
-
+    
     async def objects(self, entities):
+        """
+        Get objects for entity IDs with caching
+        """
+        cache_key = f"objects"
+        cached_data, found = self.cache.get(cache_key, entities)
+        
+        if found:
+            return cached_data
+            
         params = {
             'token': self.client_key,
             'kg': self.kg
@@ -130,9 +177,20 @@ class LamAPI():
         }
         result = await self.__submit_post(self._url.entities_objects_url(), params, json_data)
         result = result if result is not None else {}
+        
+        self.cache.set(cache_key, entities, result)
         return result
     
     async def predicates(self, entities):
+        """
+        Get predicates for entity IDs with caching
+        """
+        cache_key = f"predicates"
+        cached_data, found = self.cache.get(cache_key, entities)
+        
+        if found:
+            return cached_data
+            
         params = {
             'token': self.client_key,
             'kg': self.kg
@@ -142,9 +200,20 @@ class LamAPI():
         }
         result = await self.__submit_post(self._url.entities_predicates_url(), params, json_data)
         result = result if result is not None else {}
+        
+        self.cache.set(cache_key, entities, result)
         return result
 
     async def types(self, entities):
+        """
+        Get types for entity IDs with caching
+        """
+        cache_key = f"types"
+        cached_data, found = self.cache.get(cache_key, entities)
+        
+        if found:
+            return cached_data
+            
         params = {
             'token': self.client_key,
             'kg': self.kg
@@ -154,8 +223,20 @@ class LamAPI():
         }
         result = await self.__submit_post(self._url.entities_types_url(), params, json_data)
         result = result if result is not None else {}
-
+        
+        self.cache.set(cache_key, entities, result)
+        return result
+    
     async def literals(self, entities):
+        """
+        Get literals for entity IDs with caching
+        """
+        cache_key = f"literals"
+        cached_data, found = self.cache.get(cache_key, entities)
+        
+        if found:
+            return cached_data
+            
         params = {
             'token': self.client_key,
             'kg': self.kg
@@ -165,9 +246,33 @@ class LamAPI():
         }
         result = await self.__submit_post(self._url.entities_literals_url(), params, json_data)
         result = result if result is not None else {}
+        
+        self.cache.set(cache_key, entities, result)
         return result
 
     async def lookup(self, string, fuzzy=False, types=None, limit=1000, ids=None, kind="entity", NERtype=None, language=None, query=None):
+        """
+        Lookup entities with caching
+        """
+        # Create a cache key based on all parameters
+        cache_params = {
+            'string': string,
+            'fuzzy': fuzzy,
+            'types': types,
+            'limit': limit,
+            'ids': ids,
+            'kind': kind,
+            'NERtype': NERtype,
+            'language': language,
+            'query': query
+        }
+        
+        cache_key = f"lookup"
+        cached_data, found = self.cache.get(cache_key, cache_params)
+        
+        if found:
+            return cached_data
+        
         # Convert boolean values to strings
         fuzzy_str = 'true' if fuzzy else 'false'
         types_str = ' '.join(types) if types is not None else ''
@@ -178,13 +283,13 @@ class LamAPI():
             'name': string,
             'fuzzy': False,
             'kg': self.kg,
-            'limit': 20,
+            'limit': limit if limit is not None else 20,
             'types': types_str,
             'ids': ids_str,
-            'kind': "entity",
+            'kind': kind or "entity",
             'NERtype': NERtype,
-            'language': "en",
-            "cache": "False",
+            'language': language or "en",
+            'cache': "False",
             'query': query
         }
 
@@ -193,5 +298,6 @@ class LamAPI():
 
         result = await self.__submit_get(self._url.lookup_url(), params)
         result = result if result is not None else []
+        
+        self.cache.set(cache_key, cache_params, result)
         return result
-    

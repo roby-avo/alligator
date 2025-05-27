@@ -27,6 +27,11 @@ class MongoDBWrapper:
             c.create_index([('datasetName', 1)])
             c.create_index([('tableName', 1)])
             
+        # Add index for the request cache collection
+        c = self.get_collection('requestCache')
+        c.create_index([('request_hash', 1)], unique=True)
+        c.create_index([('created_at', 1)])
+        
         c = self.get_collection('row')
         c.create_index([('state', 1)])
         c.create_index([('datasetName', 1)])
