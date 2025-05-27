@@ -3,6 +3,8 @@ import math
 import time
 import sys
 import os
+import asyncio
+import random
 
 # Add the parent directory to the system path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -15,6 +17,7 @@ class TableModel:
     TABLE_FOR_PAGE = int(config_values[1])
     CHUNCK_SIZE = int(config_values[2])
     SPLIT_THRESHOLD = 2 * CHUNCK_SIZE  # Set SPLIT_THRESHOLD based on CHUNCK_SIZE
+    SAMPLE_SIZE_FOR_ANALYSIS = 50  # Maximum number of rows to sample for global column analysis
 
 
     def __init__(self, db, lamAPI):
@@ -22,11 +25,51 @@ class TableModel:
         self._lamAPI = lamAPI
         self.data = []
         self.table_metadata = {}
+        self.global_column_metadata = {}  # Store global column metadata
+    
+    async def analyze_columns_globally(self, entry):
+        """
+        Analyze columns globally before splitting into batches.
+        Samples rows from the table to ensure efficiency.
+        
+        Args:
+            entry: Table entry containing rows data
+        """
+        if not entry.get('rows'):
+            return None
+        
+        # Sample rows for analysis (up to SAMPLE_SIZE_FOR_ANALYSIS)
+        rows_to_sample = entry['rows']
+        if len(rows_to_sample) > self.SAMPLE_SIZE_FOR_ANALYSIS:
+            rows_to_sample = random.sample(rows_to_sample, self.SAMPLE_SIZE_FOR_ANALYSIS)
+        
+        # Extract column data for analysis
+        columns_data = [[] for _ in range(len(rows_to_sample[0]['data']))]
+        for row in rows_to_sample:
+            for id_col, cell in enumerate(row['data']):
+                columns_data[id_col].append(str(cell))
+        
+        # Perform column analysis using LamAPI
+        try:
+            table_key = f"{entry['datasetName']}:{entry['tableName']}"
+            metadata = await self._lamAPI.column_analysis(columns_data)
+            self.global_column_metadata[table_key] = metadata
+            return metadata
+        except Exception as e:
+            print(f"Error performing global column analysis: {e}")
+            return None
 
     def parse_json(self, json_data):
         # Ensure it's a list of tables
         if not isinstance(json_data, list):
             raise ValueError("The provided JSON data is not a list of tables.")
+
+        # Perform global column analysis for each table before processing
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        for entry in json_data:
+            loop.run_until_complete(self.analyze_columns_globally(entry))
+        loop.close()
 
         # Process data to split larger tables into chunks
         processed_data = []
@@ -35,13 +78,18 @@ class TableModel:
             rows = entry['rows']
             column_types = entry.get('semanticAnnotations', {}).get('cta', {})
             entry['types'] = {str(c['idColumn']):' '.join(sorted(c['types'], reverse=True)) for c in column_types}
-
+            
             # Set default values for page, status and state
             entry['page'] = 1   
             entry['status'] = 'TODO'
             entry['state'] = 'READY'
             if "candidateSize" not in entry:
                 entry['candidateSize'] = 20
+                
+            # Add global column metadata to each entry
+            table_key = f"{entry['datasetName']}:{entry['tableName']}"
+            if table_key in self.global_column_metadata:
+                entry['globalColumnMetadata'] = self.global_column_metadata[table_key]
 
             # Split rows into chunks of CHUNCK_SIZE and create new table entries for each chunk
             if len(rows) >= TableModel.CHUNCK_SIZE * 2:
@@ -61,14 +109,46 @@ class TableModel:
             else:
                 processed_data.append(entry)
               
-
         self.data.extend(processed_data)
+
+    async def _analyze_csv_columns(self, df, dataset_name, table_name):
+        """
+        Analyze columns for a CSV file
+        """
+        if len(df) == 0:
+            return None
+            
+        # Sample rows for analysis
+        sample_size = min(len(df), self.SAMPLE_SIZE_FOR_ANALYSIS)
+        df_sample = df.sample(n=sample_size) if len(df) > sample_size else df
+        
+        # Extract column data for analysis
+        columns_data = [[] for _ in range(len(df.columns))]
+        for _, row in df_sample.iterrows():
+            for id_col, cell in enumerate(row):
+                columns_data[id_col].append(str(cell))
+        
+        # Perform column analysis
+        try:
+            table_key = f"{dataset_name}:{table_name}"
+            metadata = await self._lamAPI.column_analysis(columns_data)
+            self.global_column_metadata[table_key] = metadata
+            return metadata
+        except Exception as e:
+            print(f"Error performing global column analysis: {e}")
+            return None
 
     def parse_csv(self, file_path, dataset_name, table_name, kg_reference):
         # Read the CSV file using pandas
         df = pd.read_csv(file_path)
         # Extract headers
         headers = df.columns.tolist()
+        
+        # Perform global column analysis before splitting
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.run_until_complete(self._analyze_csv_columns(df, dataset_name, table_name))
+        loop.close()
         
         # Build the initial table object
         table_obj = {
@@ -84,6 +164,12 @@ class TableModel:
             "candidateSize": 1000,
             "page": 1
         }
+        
+        # Add global column metadata if available
+        table_key = f"{dataset_name}:{table_name}"
+        if table_key in self.global_column_metadata:
+            table_obj['globalColumnMetadata'] = self.global_column_metadata[table_key]
+            
         table_obj['rows'] = [{"idRow": idx + 1, "data": row_data} for idx, row_data in enumerate(df.values.tolist())]
         self.fill_table_metadata(table_obj)    
 
@@ -170,4 +256,3 @@ class TableModel:
                 except:
                     self._db.get_collection("job").delete_one({"_id": inserted_id})
                     raise
-            

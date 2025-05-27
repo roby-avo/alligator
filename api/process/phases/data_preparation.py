@@ -26,134 +26,46 @@ class DataPreparation:
             
     async def compute_datatype(self, current_column_metadata, current_target):
         column_metadata = {}
-        #print("column_metadata", self._column_to_datatype, flush=True)
-        #print("rows", self._rows, flush=True)
         target = {"SUBJ": None, "NE": [], "LIT": [], "NO_TAG": [], "LIT_DATATYPE": {}}
-        columns_data = [[] for _ in range(0, len(self._rows[0]['data']))]
-        for row in self._rows:
-            for id_col, cell in enumerate(row["data"]):
-                columns_data[id_col].append(str(cell))
         
-        #print("columns_data", columns_data, flush=True)
-        # Run the async function and wait for it to complete
-        metadata = await self._lamAPI.column_analysis(columns_data)
-        metadata = {
-            "0": {
-                "index_column": 0,
-                "tag": "NE",
-                "classification": "PERSON",
-                "datatype": "PERSON",
-                "probabilities": {
-                "PERSON": 1.0
-                }
-            },
-            "1": {
-                "index_column": 1,
-                "tag": "LIT",
-                "classification": "NUMBER",
-                "datatype": "NUMBER",
-                "probabilities": {
-                "NUMBER": 1.0,
-                "DATE": 1.0
-                }
-            },
-            "2": {
-                "index_column": 2,
-                "tag": "LIT",
-                "classification": "NUMBER",
-                "datatype": "NUMBER",
-                "probabilities": {
-                "NUMBER": 1.0
-                }
-            },
-            "3": {
-                "index_column": 3,
-                "tag": "NE",
-                "classification": "ORGANIZATION",
-                "datatype": "ORGANIZATION",
-                "probabilities": {
-                "ORGANIZATION": 1.0
-                }
-            },
-            "4": {
-                "index_column": 4,
-                "tag": "LIT",
-                "classification": "NUMBER",
-                "datatype": "NUMBER",
-                "probabilities": {
-                "NUMBER": 1.0
-                }
-            },
-            "5": {
-                "index_column": 5,
-                "tag": "LIT",
-                "classification": "STRING",
-                "datatype": "STRING",
-                "probabilities": {
-                "PERSON": 1.0
-                }
-            },
-            "6": {
-                "index_column": 6,
-                "tag": "LIT",
-                "classification": "NUMBER",
-                "datatype": "NUMBER",
-                "probabilities": {
-                "NUMBER": 1.0
-                }
-            },
-            "7": {
-                "index_column": 7,
-                "tag": "NE",
-                "classification": "PERSON",
-                "datatype": "PERSON",
-                "probabilities": {
-                "PERSON": 1.0
-                }
-            },
-            "8": {
-                "index_column": 8,
-                "tag": "NE",
-                "classification": "PERSON",
-                "datatype": "PERSON",
-                "probabilities": {
-                "PERSON": 1.0
-                }
-            },
-            "9": {
-                "index_column": 9,
-                "tag": "LIT",
-                "classification": "NUMBER",
-                "datatype": "NUMBER",
-                "probabilities": {
-                "NUMBER": 1.0,
-                "DATE": 1.0
-                }
-            },
-            "10": {
-                "index_column": 10,
-                "tag": "LIT",
-                "classification": "STRING",
-                "datatype": "STRING",
-                "probabilities": {
-                "STRING": 1.0
-                }
-            }
-        }
+        # Check if global column metadata is available in the data
+        global_metadata = None
+        for row in self._rows:
+            if hasattr(row, 'get') and callable(row.get) and row.get('globalColumnMetadata'):
+                global_metadata = row.get('globalColumnMetadata')
+                break
+                
+        # Prepare columns data for analysis if global metadata is not available
+        if not global_metadata:
+            columns_data = [[] for _ in range(0, len(self._rows[0]['data']))]
+            for row in self._rows:
+                for id_col, cell in enumerate(row["data"]):
+                    columns_data[id_col].append(str(cell))
+            
+            # Run the async function and wait for it to complete
+            metadata = await self._lamAPI.column_analysis(columns_data)
+        else:
+            # Use the pre-computed global metadata
+            metadata = global_metadata
   
-
-        #print("metadata", metadata, flush=True)
         first_NE_column = False  
         for id_col in metadata:
             lit_datatype = None
-            if id_col in current_column_metadata:
+            
+            # MODIFIED: Prioritize global metadata over existing column metadata
+            if id_col in metadata:
+                # Use the tag from global metadata
+                tag = metadata[id_col]["tag"]
+                if tag == "LIT":
+                    lit_datatype = metadata[id_col]["datatype"]
+            elif id_col in current_column_metadata:
                 tag = current_column_metadata[id_col]
                 if tag == "LIT":
                     lit_datatype = current_target["LIT_DATATYPE"][id_col]
             elif id_col not in self._column_to_datatype:
-                tag = metadata[id_col]["tag"]
-                if tag == "LIT":
-                    lit_datatype = metadata[id_col]["datatype"]
+                # This is a fallback that shouldn't be needed if global metadata is available
+                tag = "LIT"  # Default tag
+                lit_datatype = "STRING"  # Default datatype
             else:
                 tag = self._column_to_datatype[id_col]['kind']
                 lit_datatype = self._column_to_datatype[id_col]['datatype']

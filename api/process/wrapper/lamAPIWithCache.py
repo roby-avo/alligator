@@ -3,7 +3,7 @@ import asyncio
 import json
 import os
 from .lamAPICache import LamAPICache
-from .URLs import URLs  # Fixed: Changed from wrapper.URLs to relative import
+from .URLs import URLs  # Using relative import instead of wrapper.URLs
 
 
 class LamAPI:
@@ -83,7 +83,7 @@ class LamAPI:
         Perform column analysis with caching
         """
         # Check cache first
-        cache_key = f"column_analysis"
+        cache_key = "column_analysis"
         cached_data, found = self.cache.get(cache_key, columns)
         
         if found:
@@ -97,10 +97,20 @@ class LamAPI:
             'token': self.client_key
         }
         result = await self.__submit_post(self._url.column_analysis_url(), params, json_data)
-        result = result[0]["table_1"] if result is not None and len(result) > 0 else []
         
-        self.cache.set(cache_key, columns, result)
-        return result
+        # Process the result to match the expected format
+        processed_result = {}
+        
+        if result is not None and len(result) > 0:
+            # Get the table data from the first result element
+            table_data = result[0].get("table_1", {})
+            
+            # Process each column directly from the table_data
+            for col_idx in table_data:
+                processed_result[col_idx] = table_data[col_idx]
+        
+        self.cache.set(cache_key, columns, processed_result)
+        return processed_result
     
     async def literal_recognizer(self, column):
         """
