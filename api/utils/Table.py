@@ -3,6 +3,7 @@ import math
 import time
 import sys
 import os
+import asyncio
 
 # Add the parent directory to the system path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -15,6 +16,7 @@ class TableModel:
     TABLE_FOR_PAGE = int(config_values[1])
     CHUNCK_SIZE = int(config_values[2])
     SPLIT_THRESHOLD = 2 * CHUNCK_SIZE  # Set SPLIT_THRESHOLD based on CHUNCK_SIZE
+    MAX_SAMPLE_ROWS = 50  # Maximum number of rows to sample for column analysis
 
 
     def __init__(self, db, lamAPI):
@@ -23,14 +25,68 @@ class TableModel:
         self.data = []
         self.table_metadata = {}
 
+    async def analyze_columns(self, table_data, header):
+        """Perform global column analysis on a sample of rows to determine column types"""
+        # Sample rows (up to MAX_SAMPLE_ROWS)
+        rows = table_data['rows']
+        sample_rows = rows[:min(len(rows), self.MAX_SAMPLE_ROWS)]
+        
+        # Extract column data from sample rows
+        columns_data = [[] for _ in range(len(header))]
+        for row in sample_rows:
+            for id_col, cell in enumerate(row["data"]):
+                columns_data[id_col].append(str(cell))
+        
+        # Perform column analysis using lamAPI
+        try:
+            metadata = await self._lamAPI.column_analysis(columns_data)
+            column_metadata = {}
+            target = {"SUBJ": None, "NE": [], "LIT": [], "NO_TAG": [], "LIT_DATATYPE": {}}
+            
+            first_NE_column = False
+            for id_col in metadata:
+                tag = metadata[id_col]["tag"]
+                lit_datatype = None
+                
+                if tag == "LIT":
+                    lit_datatype = metadata[id_col]["datatype"]
+                
+                if tag == "SUBJ":  # Normalize SUBJ to NE
+                    tag = "NE"
+                
+                column_metadata[id_col] = tag
+                target[tag].append(int(id_col))
+                
+                if tag == "NE":
+                    if not first_NE_column:
+                        target["SUBJ"] = int(id_col)
+                        first_NE_column = True
+                elif tag == "LIT":
+                    target['LIT_DATATYPE'][str(id_col)] = lit_datatype
+            
+            return column_metadata, target
+        except Exception as e:
+            print(f"Column analysis error: {str(e)}", flush=True)
+            return {}, {"SUBJ": None, "NE": [], "LIT": [], "NO_TAG": [], "LIT_DATATYPE": {}}
+
     def parse_json(self, json_data):
         # Ensure it's a list of tables
         if not isinstance(json_data, list):
             raise ValueError("The provided JSON data is not a list of tables.")
 
-        # Process data to split larger tables into chunks
-        processed_data = []
+        # Process each table to analyze columns globally first
         for entry in json_data:
+            # Run column analysis first (asynchronously)
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            column_metadata, target = loop.run_until_complete(self.analyze_columns(entry, entry['header']))
+            loop.close()
+            
+            # Store the column metadata with the table
+            entry['column'] = column_metadata
+            entry['target'] = target
+            
+            # Process data to split larger tables into chunks
             self.fill_table_metadata(entry)
             rows = entry['rows']
             column_types = entry.get('semanticAnnotations', {}).get('cta', {})
@@ -43,6 +99,7 @@ class TableModel:
             if "candidateSize" not in entry:
                 entry['candidateSize'] = 100
 
+            processed_data = []
             # Split rows into chunks of CHUNCK_SIZE and create new table entries for each chunk
             if len(rows) >= TableModel.CHUNCK_SIZE * 2:
                 chunks = [rows[i: i + TableModel.CHUNCK_SIZE] for i in range(0, len(rows), TableModel.CHUNCK_SIZE)]
@@ -61,8 +118,7 @@ class TableModel:
             else:
                 processed_data.append(entry)
               
-
-        self.data.extend(processed_data)
+            self.data.extend(processed_data)
 
     def parse_csv(self, file_path, dataset_name, table_name, kg_reference):
         # Read the CSV file using pandas
@@ -75,7 +131,7 @@ class TableModel:
             "datasetName": dataset_name,
             "tableName": table_name,
             "header": headers,
-            "rows": [],
+            "rows": [{"idRow": idx + 1, "data": row_data} for idx, row_data in enumerate(df.values.tolist())],
             "kgReference": kg_reference,
             "column": {},
             "target": {},
@@ -84,8 +140,18 @@ class TableModel:
             "candidateSize": 1000,
             "page": 1
         }
-        table_obj['rows'] = [{"idRow": idx + 1, "data": row_data} for idx, row_data in enumerate(df.values.tolist())]
-        self.fill_table_metadata(table_obj)    
+        
+        # Run column analysis first (asynchronously)
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        column_metadata, target = loop.run_until_complete(self.analyze_columns(table_obj, headers))
+        loop.close()
+        
+        # Store the column metadata with the table
+        table_obj['column'] = column_metadata
+        table_obj['target'] = target
+        
+        self.fill_table_metadata(table_obj)
 
         # Split DataFrame rows into chunks of CHUNK_SIZE and create new table entries for each chunk
         num_rows = len(df)
@@ -104,7 +170,6 @@ class TableModel:
                 self.data.append(new_entry)
                 offset = new_entry['rows'][-1]["idRow"] + 1
         else:
-            table_obj['rows'] = [{"idRow": idx + 1, "data": row_data} for idx, row_data in enumerate(df.values.tolist())]
             self.data.append(table_obj)
          
         return num_rows
@@ -170,4 +235,3 @@ class TableModel:
                 except:
                     self._db.get_collection("job").delete_one({"_id": inserted_id})
                     raise
-            

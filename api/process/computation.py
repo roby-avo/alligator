@@ -71,9 +71,17 @@ async def main():
     dp = DataPreparation(header, rows_data, lamAPI)
     
     try:
-        column_metadata, target = await dp.compute_datatype(column_metadata, target)
+        # Check if pre-computed column metadata exists and is valid
+        if column_metadata and target and target.get("NE") and target.get("LIT_DATATYPE"):
+            # Use pre-computed column metadata
+            pass  # We already have the metadata, no need to re-compute
+        else:
+            # Fall back to computing metadata if pre-computed values aren't available
+            column_metadata, target = await dp.compute_datatype(column_metadata, target)
+            
         if target["SUBJ"] is not None:
             column_metadata[str(target["SUBJ"])] = "SUBJ"
+            
         obj_row_update["column"] = column_metadata
         obj_row_update["metadata"] = {
             "column": [{"idColumn": int(id_col), "tag": column_metadata[id_col]} for id_col in column_metadata]

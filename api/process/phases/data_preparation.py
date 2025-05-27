@@ -25,19 +25,20 @@ class DataPreparation:
         return parsed_header
             
     async def compute_datatype(self, current_column_metadata, current_target):
+        # If we have valid pre-computed metadata, use it
+        if current_column_metadata and current_target and current_target.get("NE") and current_target.get("LIT_DATATYPE"):
+            return current_column_metadata, current_target
+            
+        # Otherwise compute it from scratch
         column_metadata = {}
-        #print("column_metadata", self._column_to_datatype, flush=True)
-        #print("rows", self._rows, flush=True)
         target = {"SUBJ": None, "NE": [], "LIT": [], "NO_TAG": [], "LIT_DATATYPE": {}}
         columns_data = [[] for _ in range(0, len(self._rows[0]['data']))]
         for row in self._rows:
             for id_col, cell in enumerate(row["data"]):
                 columns_data[id_col].append(str(cell))
         
-        #print("columns_data", columns_data, flush=True)
         # Run the async function and wait for it to complete
         metadata = await self._lamAPI.column_analysis(columns_data)
-        #print("metadata", metadata, flush=True)
         first_NE_column = False  
         for id_col in metadata:
             lit_datatype = None
