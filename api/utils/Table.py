@@ -27,6 +27,11 @@ class TableModel:
 
     async def analyze_columns(self, table_data, header):
         """Perform global column analysis on a sample of rows to determine column types"""
+        # Check if there are no rows in the data
+        if not table_data.get('rows'):
+            print(f"Warning: No rows found in table data", flush=True)
+            return {}, {"SUBJ": None, "NE": [], "LIT": [], "NO_TAG": [], "LIT_DATATYPE": {}}
+            
         # Sample rows (up to MAX_SAMPLE_ROWS)
         rows = table_data['rows']
         sample_rows = rows[:min(len(rows), self.MAX_SAMPLE_ROWS)]
