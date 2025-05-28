@@ -26,8 +26,8 @@ class DataPreparation:
             
     async def compute_datatype(self, current_column_metadata, current_target):
         # If we have valid pre-computed metadata, use it
-        if current_columnMetadata and current_target and current_target.get("NE") and current_target.get("LIT_DATATYPE"):
-            return current_columnMetadata, current_target
+        if current_column_metadata and current_target and current_target.get("NE") and current_target.get("LIT_DATATYPE"):
+            return current_column_metadata, current_target
             
         # Check if there are any rows in the data
         if not self._rows:
